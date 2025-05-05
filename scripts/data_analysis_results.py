@@ -1,0 +1,1159 @@
+# Data Analysis Script for Neurocomputing Journal Paper (2nd Revision)
+# This script performs comprehensive analysis on research data, 
+# including statistical tests, data visualization, and network analysis
+# for the second revision of our submission to Neurocomputing journal.
+
+#%% 
+# Imports principales
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+import os
+import plotly.express as px
+import zepid
+from zepid.graphics import EffectMeasurePlot
+import networkx as nx
+from numpy import genfromtxt
+from scipy import stats
+from IPython.display import Image
+from thefuzz import fuzz
+from matplotlib.patches import Patch
+import re
+import matplotlib.gridspec as gridspec
+
+#%% 
+# Importar funciones personalizadas (ajusta el path si es necesario)
+import functions as fn
+
+#%% 
+# Configuración del directorio de trabajo
+# Get the parent directory
+current_directory = os.getcwd()
+parent_directory = os.path.dirname(current_directory)
+
+# Change to the parent directory
+os.chdir(parent_directory)
+
+# Get the new current working directory to confirm
+new_directory = os.getcwd()
+print(f"New Directory: {new_directory}")
+
+#%% 
+# Cargar el dataset principal
+df_metadata = pd.read_excel(r'.\data\cleaned\Normalized Table - Metadata.xlsx')
+
+# Limpieza inicial de datos
+df_metadata = df_metadata.fillna('-')
+df_metadata_without_duplicates = df_metadata.drop_duplicates(subset='paper_id')
+
+#%% 
+# Conteo de países de afiliación del primer autor
+print("\nConteo de países de afiliación del primer autor:")
+country_counts = df_metadata_without_duplicates['first_author_country_affiliation'].value_counts()
+print(country_counts)
+
+# Mostrar el total de países únicos
+print(f"\nTotal de países únicos: {len(country_counts)}")
+
+#%% 
+# Clasificación de países por continente
+asia_countries = ['China', 'India', 'Japan', 'South Korea', 'Malaysia', 'Pakistan', 'Taiwan', 
+                 'Indonesia', 'Saudi Arabia', 'Iran', 'Turkey', 'United Arab Emirates']
+europe_countries = ['Germany', 'UK', 'Spain', 'Italy', 'Switzerland', 'Romania', 'Greece',
+                   'Austria', 'Finland', 'Slovenia', 'Portugal', 'France', 'Lithuania',
+                   'Macedonian', 'Netherlands', 'Ireland', 'Sweden', 'Norway', 'Poland']
+america_countries = ['USA', 'Canada', 'Colombia']
+oceania_countries = ['Australia', 'New Zealand']
+africa_countries = ['Tunisia', 'Egypt']
+
+# Crear diccionario para mapear países a continentes
+continent_mapping = {}
+for country in asia_countries:
+    continent_mapping[country] = 'Asia'
+for country in europe_countries:
+    continent_mapping[country] = 'Europe'
+for country in america_countries:
+    continent_mapping[country] = 'America'
+for country in oceania_countries:
+    continent_mapping[country] = 'Oceania'
+for country in africa_countries:
+    continent_mapping[country] = 'Africa'
+
+# Agregar el continente a cada país en el conteo
+continent_counts = {}
+uncategorized_countries = {}
+for country, count in country_counts.items():
+    if country in continent_mapping:
+        continent = continent_mapping[country]
+        continent_counts[continent] = continent_counts.get(continent, 0) + count
+    else:
+        uncategorized_countries[country] = count
+
+# Mostrar resultados por continente
+print("\nConteo de papers por continente:")
+for continent, count in sorted(continent_counts.items(), key=lambda x: x[1], reverse=True):
+    print(f"{continent}: {count}")
+
+# Mostrar países sin categorizar
+print("\nPaíses sin categorizar:")
+for country, count in uncategorized_countries.items():
+    print(f"{country}: {count}")
+
+# Mostrar totales
+total_categorized = sum(continent_counts.values())
+total_uncategorized = sum(uncategorized_countries.values())
+print(f"\nTotal de papers categorizados: {total_categorized}")
+print(f"Total de papers sin categorizar: {total_uncategorized}")
+print(f"Total general: {total_categorized + total_uncategorized}")
+
+# Crear DataFrame para visualización
+continent_df = pd.DataFrame({
+    'Continent': list(continent_counts.keys()),
+    'Count': list(continent_counts.values())
+})
+
+# Visualizar resultados
+plt.figure(figsize=(10, 6))
+sns.barplot(data=continent_df, x='Continent', y='Count')
+plt.title('Number of Papers by Continent')
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.show()
+
+#%% 
+# Analysis of Source Titles (Journals/Conferences)
+print("\nSource Title Analysis:")
+source_counts = df_metadata_without_duplicates['source_title'].value_counts()
+
+# Display source counts
+print("\nFrecuencia absoluta de fuentes de publicación:")
+for source, count in source_counts.items():
+    print(f"{source}: {count}")
+
+# Display total number of unique sources
+print(f"\nTotal de fuentes únicas: {len(source_counts)}")
+
+#%% 
+# Count papers by source type
+print("\nSource Type Analysis:")
+
+# Count papers for each source type
+journal_count = len(df_metadata_without_duplicates[df_metadata_without_duplicates['source_type_journal'] == 'x'])
+conference_count = len(df_metadata_without_duplicates[df_metadata_without_duplicates['source_type_conference'] == 'x'])
+preprint_count = len(df_metadata_without_duplicates[df_metadata_without_duplicates['source_type_preprint'] == 'x'])
+
+# Display results
+print(f"Number of journal papers: {journal_count}")
+print(f"Number of conference papers: {conference_count}")
+print(f"Number of preprint papers: {preprint_count}")
+
+# Calculate percentages
+total_papers = len(df_metadata_without_duplicates)
+print(f"\nPercentages:")
+print(f"Journal papers: {(journal_count/total_papers)*100:.2f}%")
+print(f"Conference papers: {(conference_count/total_papers)*100:.2f}%")
+print(f"Preprint papers: {(preprint_count/total_papers)*100:.2f}%")
+
+# Create visualization
+source_types = ['Journal', 'Conference', 'Preprint']
+counts = [journal_count, conference_count, preprint_count]
+
+plt.figure(figsize=(10, 6))
+sns.barplot(x=source_types, y=counts)
+plt.title('Distribution of Papers by Source Type')
+plt.xlabel('Source Type')
+plt.ylabel('Number of Papers')
+plt.tight_layout()
+plt.show()
+
+#%% 
+# Database Analysis
+print("\nDatabase Analysis:")
+
+# Load database file
+df_databases = pd.read_excel(r'.\data\cleaned\Normalized Table - Data type.xlsx')
+df_databases = df_databases.drop_duplicates(subset='paper_id')
+
+# 1. Database Access Analysis
+print("\nDatabase Access Analysis:")
+db_access_counts = df_databases['db_access'].value_counts()
+print("Database access distribution:")
+print(db_access_counts)
+
+# Calculate percentages
+total_papers_db = len(df_databases)
+print("\nPercentages:")
+for access_type, count in db_access_counts.items():
+    print(f"{access_type}: {(count/total_papers_db)*100:.2f}%")
+
+# 2. Temporal Analysis of Database Access
+print("\nTemporal Analysis of Database Access:")
+# Create a pivot table of database access by year
+db_access_by_year = pd.pivot_table(
+    df_databases,
+    values='paper_id',
+    index='year',
+    columns='db_access',
+    aggfunc='count',
+    fill_value=0
+)
+
+# Calculate percentages by year
+db_access_by_year_pct = db_access_by_year.div(db_access_by_year.sum(axis=1), axis=0) * 100
+
+# 3. Analysis of Open Databases
+print("\nAnalysis of Open Databases:")
+# Filter for papers with open databases
+open_db_papers = df_databases[df_databases['db_access'] == 'open']
+
+# Count database types
+db_types = {
+    'pre-established': len(open_db_papers[open_db_papers['db_public'] == 'x']),
+    'new_public': len(open_db_papers[open_db_papers['db_private_and_public'] == 'x']),
+    'upon_request': len(open_db_papers[open_db_papers['db_uppon_request'] == 'x'])
+}
+
+print("\nOpen Database Types Distribution:")
+for db_type, count in db_types.items():
+    print(f"{db_type}: {count} ({(count/sum(db_types.values())*100):.2f}%)")
+
+# 4. Most Used Public Databases
+print("\nMost Used Public Databases:")
+# Get all database columns
+db_columns = ['deap', 'amigos', 'mahnob', 'case', 'ascertain', 'cog_load', 
+              'multimodal_dyadic_behavior', 'recola', 'decaf', 'driving_workload',
+              'liris', 'sense_emotion', 'pmemo', 'hazumi1911', 'bio_vid_emo_db',
+              'non_eeg_biosignals_data_set_for_assessment_and_visualization_of_neurological_status',
+              'stress_recognition_in_automobile_drivers_data_set', 'pspm_hra1',
+              'a multimodal dataset for mixed  emotion recognition', 'affective road',
+              'bm-swu', 'bvhp', 'clas', 'cleas', 'ds-3', 'feng et al., 2024',
+              'k-emocon', 'lab_to_daily', 'pafew', 'poca', 's-test', 'ubfc-phys',
+              'usi_laughs', 'utd', 'verbio', 'vreed', 'wesad']
+
+# Count usage of each database in open access papers
+db_usage = {}
+for db in db_columns:
+    count = len(open_db_papers[open_db_papers[db] == 'x'])
+    if count > 0:  # Only show databases that were used
+        db_usage[db] = count
+
+# Sort by usage count
+db_usage = dict(sorted(db_usage.items(), key=lambda x: x[1], reverse=True))
+
+print("\nPublic Database Usage Count:")
+for db, count in db_usage.items():
+    print(f"{db}: {count} ({(count/len(open_db_papers)*100):.2f}%)")
+
+
+# 5. Create summary table for the paper
+print("\nSummary Table for Paper:")
+summary_data = {
+    'Metric': [
+        'Total database usages',
+        'Restricted databases',
+        'Open databases',
+        'Pre-established databases',
+        'New public databases',
+        'Available upon request',
+        'DEAP usage',
+        'AMIGOS usage',
+        'MAHNOB usage'
+    ],
+    'Count': [
+        len(df_databases[df_databases['is_database'] == 'x']),
+        len(df_databases[df_databases['db_access'] == 'restricted']),
+        len(df_databases[df_databases['db_access'] == 'open']),
+        db_types['pre-established'],
+        db_types['new_public'],
+        db_types['upon_request'],
+        db_usage.get('deap', 0),
+        db_usage.get('amigos', 0),
+        db_usage.get('mahnob', 0)
+    ]
+}
+
+summary_df = pd.DataFrame(summary_data)
+summary_df['Percentage'] = summary_df['Count'] / summary_df['Count'].iloc[0] * 100
+print("\nSummary Table:")
+print(summary_df.to_string(index=False))
+
+#%%
+# Figure: Database Access Over Time and Database Usage Frequency
+import matplotlib.pyplot as plt
+import seaborn as sns
+from matplotlib.patches import Patch
+
+sns.set_context("talk")
+
+# Prepare data for panel A (stacked bar by year for access type)
+df_access = df_databases[["paper_id", "db_access", "year"]].drop_duplicates()
+df_access_crosstab = pd.crosstab(index=df_access['year'], columns=df_access['db_access'], normalize='index')
+
+# Ensure all expected columns are present and in the right order
+for col in ['open', 'restricted', 'both']:
+    if col not in df_access_crosstab.columns:
+        df_access_crosstab[col] = 0
+# Reorder columns
+panel_a_order = ['open', 'restricted', 'both']
+df_access_crosstab = df_access_crosstab[panel_a_order]
+
+# Custom colors for panel A
+panel_a_colors = ['#1f77b4', '#ff7f0e', '#2ca02c']  # blue, orange, green
+
+# Prepare data for panel B (database usage frequency)
+db_columns = ['deap', 'amigos', 'mahnob', 'case', 'ascertain', 'cog_load',
+              'multimodal_dyadic_behavior', 'recola', 'decaf', 'driving_workload',
+              'liris', 'sense_emotion', 'pmemo', 'hazumi1911', 'bio_vid_emo_db',
+              'non_eeg_biosignals_data_set_for_assessment_and_visualization_of_neurological_status',
+              'stress_recognition_in_automobile_drivers_data_set', 'pspm_hra1',
+              'a multimodal dataset for mixed  emotion recognition', 'affective road',
+              'bm-swu', 'bvhp', 'clas', 'cleas', 'ds-3', 'feng et al., 2024',
+              'k-emocon', 'lab_to_daily', 'pafew', 'poca', 's-test', 'ubfc-phys',
+              'usi_laughs', 'utd', 'verbio', 'vreed', 'wesad']
+
+# Melt the database columns for countplot
+melted_db = df_databases.melt(id_vars=['paper_id'], value_vars=db_columns, var_name='Database', value_name='Used')
+db_freq = melted_db[melted_db['Used'] == 'x']['Database'].value_counts().reset_index()
+db_freq.columns = ['Database', 'Count']
+
+# Filter to only databases used by more than one paper
+db_freq = db_freq[db_freq['Count'] > 1]
+
+# Custom labels for the most frequent databases (top 11 or all if fewer)
+def custom_db_label(db):
+    if db.lower() == 'case':
+        return 'CASE'
+    elif db.lower() == 'vreed':
+        return 'VREED'
+    elif db.lower() == 'clas':
+        return 'CLAS'
+    elif db.lower() == 'k-emocon':
+        return 'K-EmoCon'
+    elif db.lower() == 'amigos':
+        return 'AMIGOS'
+    elif db.lower() == 'deap':
+        return 'DEAP'
+    elif db.lower() == 'mahnob':
+        return 'MAHNOB'
+    elif db.lower() == 'pmemo':
+        return 'PMEmo'
+    elif db.lower() == 'ascertain':
+        return 'ASCERTAIN'
+    elif db.lower() == 'recola':
+        return 'RECOLA'
+    elif db.lower() == 'liris':
+        return 'LIRIS'
+    elif db.lower() == 'wesad':
+        return 'WESAD'
+    else:
+        return db
+
+top_dbs = db_freq['Database'].tolist()
+custom_labels = [custom_db_label(db) for db in top_dbs]
+
+# Create subplots
+fig, axes = plt.subplots(2, 1, figsize=(13, 13), dpi=300)
+
+# Panel A: Stacked bar plot for access type by year
+df_access_crosstab.plot(kind='bar', stacked=True, rot=0, ax=axes[0], color=panel_a_colors)
+axes[0].text(-0.1, 1.1, 'A', transform=axes[0].transAxes, fontsize=36, fontweight='bold')
+axes[0].set_xlabel("Year", fontsize=24)
+axes[0].set_ylabel("Number of studies")
+
+# Custom legend for panel A (single line, correct order, custom colors)
+legend_elements = [
+    Patch(facecolor=panel_a_colors[0], label='open'),
+    Patch(facecolor=panel_a_colors[1], label='restricted'),
+    Patch(facecolor=panel_a_colors[2], label='both')
+]
+axes[0].legend(handles=legend_elements, title='Access', loc='upper right', bbox_to_anchor=(1, 1.25), frameon=False, fancybox=True, ncol=3, fontsize=18, title_fontsize=20)
+
+# Panel B: Countplot for database usage (only databases used by more than one paper)
+sns.barplot(x='Database', y='Count', data=db_freq, order=top_dbs, ax=axes[1], palette="tab10")
+axes[1].text(-0.1, 1.1, 'B', transform=axes[1].transAxes, fontsize=36, fontweight='bold')
+axes[1].set_xlabel("Databases", fontsize=24)
+axes[1].set_ylabel("Number of studies")
+axes[1].set_xticklabels(custom_labels, rotation=90, fontsize=20)
+
+fig.tight_layout()
+sns.despine(ax=axes[0])
+sns.despine(ax=axes[1])
+plt.show()
+
+# %%
+
+# Participants
+# Ahora tu tarea es analizar la composicion de la muestra en estos estudios
+# Debes buscar el promedio de sample size, y el rango (minimo y maximo sample size en la muestra)
+# Debes decirme cuantos papers no reportan la edad.
+# Tambien debes decirme cuantos papers no reportan el genero. Y, los que si lo hacen, cual es el porcentaje promedio de inclusion de mujeres en la muestra.
+# Debes decirme cuantos papers reportan de algun modo la edad de los participantes (edad promedio, rango, mediana, etc.)
+# De los papers que si reportan edad, debes decirme promedio across papers y el rango de edad across papers.
+# Por ultimo, tambien debes decirme cuantos papers reportan el pais de origen de la muestra. 
+# Y un count de los paises reportados
+
+#%%
+# Demographic analysis of participants
+print("\nParticipant Demographics Analysis:")
+
+# Load participant data
+participants_path = r'.\data\cleaned\Normalized Table - Participants.xlsx'
+df_participants = pd.read_excel(participants_path)
+df_participants = df_participants.fillna('-')
+
+# --- Sample size analysis ---
+# Papers with and without sample size (considering if ANY model reports it)
+papers_with_n = df_participants[df_participants['n'] != '-']['paper_id'].unique()
+papers_without_n = df_participants[~df_participants['paper_id'].isin(papers_with_n)]['paper_id'].unique()
+
+# For calculations, use all models
+participants_n = df_participants[df_participants['n'] != '-']
+participants_n['n'] = participants_n['n'].astype(int)
+
+# Mean, min, max sample size (across all models)
+mean_n = participants_n['n'].mean()
+min_n = participants_n['n'].min()
+max_n = participants_n['n'].max()
+
+print(f"Number of papers reporting sample size: {len(papers_with_n)}")
+print(f"Number of papers NOT reporting sample size: {len(papers_without_n)}")
+print(f"Mean sample size: {mean_n:.1f}")
+print(f"Sample size range: {min_n} - {max_n}")
+
+# --- Age reporting analysis ---
+# Papers reporting mean age (if ANY model reports it)
+papers_with_mean_age = df_participants[df_participants['mean_age'] != '-']['paper_id'].unique()
+papers_without_mean_age = df_participants[~df_participants['paper_id'].isin(papers_with_mean_age)]['paper_id'].unique()
+
+# Papers reporting age range (if ANY model reports it)
+papers_with_range_age = df_participants[df_participants['range_age'] != '-']['paper_id'].unique()
+papers_without_range_age = df_participants[~df_participants['paper_id'].isin(papers_with_range_age)]['paper_id'].unique()
+
+# Papers reporting any age info
+papers_reporting_age = set(papers_with_mean_age).union(set(papers_with_range_age))
+print(f"Number of papers reporting any age info: {len(papers_reporting_age)}")
+print(f"Number of papers NOT reporting any age info: {len(df_participants['paper_id'].unique()) - len(papers_reporting_age)}")
+
+# Mean of reported mean ages (across all models)
+mean_age_data = df_participants[df_participants['mean_age'] != '-']
+if not mean_age_data.empty:
+    mean_age_data['mean_age'] = mean_age_data['mean_age'].astype(float)
+    mean_of_means = mean_age_data['mean_age'].mean()
+    min_mean_age = mean_age_data['mean_age'].min()
+    max_mean_age = mean_age_data['mean_age'].max()
+    print(f"Mean of reported mean ages: {mean_of_means:.1f} (range: {min_mean_age}-{max_mean_age})")
+    
+    # Papers that report mean age
+    papers_with_mean_age = mean_age_data['paper_id'].unique()
+    
+    # Papers that report both mean age and age range
+    papers_with_both = df_participants[
+        (df_participants['mean_age'] != '-') & 
+        (df_participants['range_age'] != '-')
+    ]['paper_id'].unique()
+    
+    # Calculate percentage of papers with mean age but no range
+    papers_with_mean_no_range = set(papers_with_mean_age) - set(papers_with_both)
+    percentage_no_range = (len(papers_with_mean_no_range) / len(papers_with_mean_age)) * 100
+    
+    print(f"\nOf the papers that reported average participant age, {percentage_no_range:.1f}% did not provide the age range.")
+    
+    # Calculate statistics for papers reporting both
+    if len(papers_with_both) > 0:
+        both_data = df_participants[
+            (df_participants['paper_id'].isin(papers_with_both)) & 
+            (df_participants['mean_age'] != '-')
+        ]
+        both_data['mean_age'] = both_data['mean_age'].astype(float)
+        mean_with_range = both_data['mean_age'].mean()
+        min_with_range = both_data['mean_age'].min()
+        max_with_range = both_data['mean_age'].max()
+        print(f"In those that did, the mean age was {mean_with_range:.1f} years, with a range from {min_with_range:.2f} to {max_with_range:.1f} years.")
+else:
+    print("No mean ages reported.")
+
+# Range of ages (across all models)
+range_age_data = df_participants[df_participants['range_age'] != '-']
+if not range_age_data.empty:
+    # Normalizar guiones y limpiar espacios
+    def clean_range(val):
+        if isinstance(val, str):
+            val = val.replace('–', '-').replace('—', '-').replace('‐', '-')
+            val = val.replace(',', '.')
+            val = re.sub(r'[^0-9\-.]', '', val)  # Solo números, punto, guion
+            val = val.strip('-').strip()
+        return val
+
+    range_age_data['range_age_clean'] = range_age_data['range_age'].apply(clean_range)
+    # Extraer los valores numéricos
+    min_vals = []
+    max_vals = []
+    for val in range_age_data['range_age_clean']:
+        if '-' in val:
+            parts = val.split('-')
+            try:
+                min_vals.append(float(parts[0]))
+                max_vals.append(float(parts[1]))
+            except Exception:
+                continue
+    if min_vals and max_vals:
+        min_range = min(min_vals)
+        max_range = max(max_vals)
+        print(f"Age range across all papers: {min_range}-{max_range}")
+    else:
+        print("No valid age ranges found.")
+else:
+    print("No age ranges reported.")
+
+# --- Gender reporting analysis ---
+# Papers reporting female participants (if ANY model reports it)
+papers_with_female = df_participants[df_participants['n_female'] != '-']['paper_id'].unique()
+papers_without_female = df_participants[~df_participants['paper_id'].isin(papers_with_female)]['paper_id'].unique()
+
+print(f"Number of papers NOT reporting number of female participants: {len(papers_without_female)}")
+print(f"Number of papers reporting number of female participants: {len(papers_with_female)}")
+
+# Percentage of women in the sample (across all models)
+female_data = df_participants[(df_participants['n_female'] != '-') & (df_participants['n'] != '-')]
+if not female_data.empty:
+    female_data['n_female'] = female_data['n_female'].astype(int)
+    female_data['n'] = female_data['n'].astype(int)
+    female_data['female_percent'] = female_data['n_female'] / female_data['n'] * 100
+    mean_female_percent = female_data['female_percent'].mean()
+    print(f"Average percentage of women in the sample (across all models): {mean_female_percent:.1f}%")
+else:
+    print("No valid sample size and n_female data to calculate percentage of women.")
+
+# --- Country of origin reporting ---
+# Papers reporting country (if ANY model reports it)
+papers_with_country = df_participants[df_participants['country'] != '-']['paper_id'].unique()
+papers_without_country = df_participants[~df_participants['paper_id'].isin(papers_with_country)]['paper_id'].unique()
+
+print(f"Number of papers reporting country of origin: {len(papers_with_country)}")
+print(f"Number of papers NOT reporting country of origin: {len(papers_without_country)}")
+
+# Count of reported countries (across all models)
+country_data = df_participants[df_participants['country'] != '-']
+country_counts = country_data['country'].value_counts()
+print("\nReported country counts:")
+print(country_counts)
+
+#%%
+# Helper functions for network visualization
+def nudge(pos, x_shift, y_shift):
+    return {n:(x + x_shift, y + y_shift) for n,(x,y) in pos.items()}
+
+# Define boxes for network labels
+boxes = dict(facecolor='white', alpha=1)
+
+# Self-report Analysis
+print("\nSelf-report Analysis:")
+
+# Load self-report data
+df_self_report = pd.read_excel(r'.\data\cleaned\Normalized Table - Self-report.xlsx')
+df_self_report = df_self_report.fillna('-')
+
+# Analysis of emotional categories
+emotional_categories = [
+    'anger', 'disgust', 'fear', 'sadness', 'surprise', 'happiness', 
+    'pleasant', 'anxiety', 'neutral', 'funny', 'amusement', 'joy',
+    'bored', 'calm', 'calmness', 'cheerful', 'concentration', 'confrustion',
+    'confusion', 'contempt', 'dejection', 'delight', 'depressed', 'engaged',
+    'eureka', 'excited', 'frustration', 'negative', 'nervous', 'positive',
+    'pride', 'relieved', 'sorrow', 'tenderness'
+]
+
+# Group by paper_id and get first occurrence of each category
+emotional_categories_grouped = df_self_report.groupby(['paper_id'] + emotional_categories).nth(0)
+emotional_categories_grouped.reset_index(inplace=True)
+
+# Melt the dataframe to get category frequencies
+emotional_categories_melted = pd.melt(
+    emotional_categories_grouped,
+    id_vars=['paper_id'],
+    value_vars=emotional_categories,
+    var_name='variable',
+    value_name='value'
+)
+
+# Filter for categories that were used (marked with 'x')
+emotional_categories_used = emotional_categories_melted[emotional_categories_melted['value'] == 'x']
+
+# Analysis of emotional dimensions
+emotional_dimensions = [
+    'valence', 'arousal', 'dominance', 'like_dislike', 'familiarity',
+    'stress', 'engagement', 'predictability', 'boredom', 'relaxation',
+    'anxiety_dim', 'flow', 'frustration_dim'
+]
+
+# Group by paper_id and get first occurrence of each dimension
+emotional_dimensions_grouped = df_self_report.groupby(['paper_id'] + emotional_dimensions).nth(0)
+emotional_dimensions_grouped.reset_index(inplace=True)
+
+# Melt the dataframe to get dimension frequencies
+emotional_dimensions_melted = pd.melt(
+    emotional_dimensions_grouped,
+    id_vars=['paper_id'],
+    value_vars=emotional_dimensions,
+    var_name='variable',
+    value_name='value'
+)
+
+# Filter for dimensions that were used (marked with 'x')
+emotional_dimensions_used = emotional_dimensions_melted[emotional_dimensions_melted['value'] == 'x']
+
+# Create adjacency matrices for network analysis
+# For categories
+df_matrix_cat = df_self_report[emotional_categories].replace(['-', '--', '---', ' ', np.nan], 0).replace('x', 1)
+df_matrix_cat = df_matrix_cat.astype(int)  # Convert to integer type
+adj_matrix_cat = df_matrix_cat.T.dot(df_matrix_cat)
+np.fill_diagonal(adj_matrix_cat.values, 0)
+
+# For dimensions
+df_matrix_dim = df_self_report[emotional_dimensions].replace(['-', '--', '---', ' ', np.nan], 0).replace('x', 1)
+df_matrix_dim = df_matrix_dim.astype(int)  # Convert to integer type
+adj_matrix_dim = df_matrix_dim.T.dot(df_matrix_dim)
+np.fill_diagonal(adj_matrix_dim.values, 0)
+
+# Create network graphs
+G_cat = nx.DiGraph(adj_matrix_cat)
+G_dim = nx.DiGraph(adj_matrix_dim)
+
+# Get edge weights
+weights_cat = nx.get_edge_attributes(G_cat, 'weight').values()
+weights_dim = nx.get_edge_attributes(G_dim, 'weight').values()
+
+# Create the final 4-panel figure
+#plt.style.use('seaborn')
+sns.set_context("talk")
+
+# Rename for display
+rename_dim = {'anxiety_dim': 'Anxiety', 'frustration_dim': 'Frustration'}
+
+def rename_dimension_label(label):
+    return rename_dim.get(label, label.capitalize() if label != 'like_dislike' else 'Preference')
+
+def rename_dimension_label_network(label):
+    return rename_dim.get(label, label)
+
+# Create figure with custom GridSpec
+fig = plt.figure(figsize=(15, 15), dpi=300)
+gs = gridspec.GridSpec(2, 2)
+
+# SUBPLOT A: Categories bar plot
+ax1 = plt.subplot(gs[0, 0])
+categories_count = emotional_categories_used['variable'].value_counts()
+categories = categories_count.index.tolist()
+categories = [category.capitalize() for category in categories]
+values = categories_count.tolist()
+colors = plt.cm.tab10(np.linspace(0, 1, len(categories)))
+ax1.bar(categories, values, color=colors)
+ax1.set_title('Categories', fontweight='bold')
+ax1.set_ylabel('Number of studies')
+# Reduce font size and rotate for better legibility
+ax1.set_xticklabels(categories, rotation=60, ha='right', fontsize=10)
+ax1.text(-0.1, 1.1, 'A', transform=ax1.transAxes, fontsize=36, fontweight='bold')
+
+# SUBPLOT B: Dimensions bar plot
+ax2 = plt.subplot(gs[0, 1])
+dimensions_count = emotional_dimensions_used['variable'].replace(rename_dim).value_counts()
+dimensions = dimensions_count.index.tolist()
+dimensions = [rename_dimension_label(dim) for dim in dimensions]
+values2 = dimensions_count.tolist()
+colors_b = plt.cm.tab10(np.linspace(0, 1, len(dimensions)))
+ax2.bar(dimensions, values2, color=colors_b)
+ax2.set_title('Dimensions', fontweight='bold')
+ax2.set_ylabel('Number of studies')
+ax2.set_xticklabels(dimensions, rotation=45, ha='right', fontsize=12)
+ax2.text(-0.1, 1.1, 'B', transform=ax2.transAxes, fontsize=36, fontweight='bold')
+
+# SUBPLOT C: Categories network
+ax3 = plt.subplot(gs[1, 0])
+# Only include categories that appear in more than 2 studies
+good_categories = [cat for cat, count in categories_count.items() if count > 2]
+G_cat_sub = G_cat.subgraph(good_categories)
+shell_nodes = [list(G_cat_sub.nodes())]
+pos_C = nx.shell_layout(G_cat_sub, nlist=shell_nodes)
+for k in pos_C:
+    pos_C[k] = pos_C[k] * 2.0
+mapping_cat = {k: k.capitalize() for k in G_cat_sub.nodes()}
+G_cat_title = nx.relabel_nodes(G_cat_sub, mapping_cat)
+pos_C_title = {mapping_cat[k]: v for k, v in pos_C.items()}
+pos_nodes_C = nudge(pos_C_title, 0, 0.25)
+# Fixed node size, 25% larger than previous (previously 675, now 844)
+fixed_node_size = 844
+nx.draw(G_cat_title, pos_C_title, ax=ax3, edgecolors="black", node_color='white', 
+        linewidths=3, font_size=10, font_weight="bold", 
+        width=[i/4 for i in weights_cat if k in good_categories], arrows=False,
+        node_size=fixed_node_size)
+# Draw node labels as the number of studies inside the node (font size 25% smaller than before)
+for node, (x, y) in pos_C_title.items():
+    original = node.lower()
+    n_studies = categories_count.get(original, 0)
+    ax3.text(x, y, str(n_studies), fontsize=10.5, ha='center', va='center', fontweight='bold', color='black', zorder=10)
+nx.draw_networkx_labels(G_cat_title, pos=pos_nodes_C, labels=None, font_size=10, 
+                       font_color='k', font_family='sans-serif', 
+                       font_weight='normal', alpha=None, bbox=boxes, 
+                       horizontalalignment='center', verticalalignment='center', ax=ax3)
+ax3.set_title('Categories', fontweight='bold')
+ax3.text(-0.1, 1.1, 'C', transform=ax3.transAxes, fontsize=36, fontweight='bold')
+
+# SUBPLOT D: Dimensions network
+ax4 = plt.subplot(gs[1, 1])
+# Only include dimensions that appear in more than 2 studies
+good_dimensions = [dim for dim, count in dimensions_count.items() if count > 2]
+G_dim_sub = G_dim.subgraph(good_dimensions)
+pos_D = nx.circular_layout(G_dim_sub)
+for k in pos_D:
+    pos_D[k] = pos_D[k] * 1.4
+def dim_label_title(k):
+    if k == 'like_dislike':
+        return 'Preference'
+    label = rename_dimension_label_network(k)
+    return label.capitalize()
+mapping_dim = {k: dim_label_title(k) for k in G_dim_sub.nodes()}
+G_dim_title = nx.relabel_nodes(G_dim_sub, mapping_dim)
+pos_D_title = {mapping_dim[k]: v for k, v in pos_D.items()}
+pos_nodes_D = nudge(pos_D_title, 0.05, 0.15)
+nx.draw(G_dim_title, pos_D_title, ax=ax4, edgecolors="black", node_color='white', 
+        linewidths=3, font_size=10, font_weight="bold", 
+        width=[i/4 for i in weights_dim if k in good_dimensions], arrows=False,
+        node_size=fixed_node_size)
+# Draw node labels as the number of studies inside the node (font size 25% smaller than before)
+for node, (x, y) in pos_D_title.items():
+    if node == 'Preference':
+        original = 'like_dislike'
+    else:
+        original = node.lower()
+    n_studies = dimensions_count.get(original, 0)
+    ax4.text(x, y, str(n_studies), fontsize=10.5, ha='center', va='center', fontweight='bold', color='black', zorder=10)
+nx.draw_networkx_labels(G_dim_title, pos=pos_nodes_D, labels=None, font_size=12, 
+                       font_color='k', font_family='sans-serif', 
+                       font_weight='normal', alpha=None, bbox=boxes, 
+                       horizontalalignment='center', verticalalignment='center', ax=ax4)
+ax4.set_title('Dimensions', fontweight='bold')
+ax4.text(-0.1, 1.1, 'D', transform=ax4.transAxes, fontsize=36, fontweight='bold')
+
+# Remove spines
+sns.despine(ax=ax1)
+sns.despine(ax=ax2)
+sns.despine(ax=ax3)
+sns.despine(ax=ax4)
+
+# Print statistics for the report
+print("\nEmotional Categories Analysis:")
+print(f"Total number of unique categories used: {len(categories_count)}")
+print("\nTop 5 most used categories:")
+print(categories_count.head())
+
+print("\nEmotional Dimensions Analysis:")
+print(f"Total number of unique dimensions used: {len(dimensions_count)}")
+print("\nTop 5 most used dimensions:")
+print(dimensions_count.head())
+
+# Tight layout and show
+plt.tight_layout()
+plt.show()
+
+#%%
+# Comprehensive Self-report Analysis
+print("\nComprehensive Self-report Analysis:")
+
+# Load self-report data
+df_self_report = pd.read_excel(r'.\data\cleaned\Normalized Table - Self-report.xlsx')
+df_self_report = df_self_report.fillna('-')
+
+# 1. Questionnaire Usage Analysis
+print("\nQuestionnaire Usage Analysis:")
+
+# Clean and standardize questionnaire usage data
+df_self_report['use_questionnaire'] = df_self_report['use_questionnaire'].str.replace('x', "Yes")
+df_self_report['use_questionnaire'] = df_self_report['use_questionnaire'].str.replace('-', "No")
+df_self_report['use_questionnaire'] = df_self_report['use_questionnaire'].str.replace("Relies on  other's questionnaire", "Relies on other's questionnaire")
+df_self_report['use_questionnaire'] = df_self_report['use_questionnaire'].str.replace("Relies on other´s questionaire", "Relies on other's questionnaire")
+
+# Get unique questionnaire usage per paper
+used_questionnaires = df_self_report.groupby(['paper_id', "use_questionnaire"]).nth(0)
+used_questionnaires.reset_index(inplace=True)
+
+# Calculate absolute and percentage counts
+questionnaire_counts = used_questionnaires["use_questionnaire"].value_counts()
+questionnaire_percentages = used_questionnaires["use_questionnaire"].value_counts(normalize=True).mul(100).round(1)
+
+print("\nQuestionnaire Usage Distribution:")
+for usage, count in questionnaire_counts.items():
+    percentage = questionnaire_percentages[usage]
+    print(f"{usage}: {count} ({percentage}%)")
+
+# 2. Standardized Questionnaire Analysis
+print("\nStandardized Questionnaire Analysis:")
+
+# Get unique questionnaire usage per paper
+questionnaires = df_self_report.groupby(['paper_id', 'affective_questionnaire_SAM', 'affective_questionnaire_PSS', 
+                                       'affective_questionnaire_PANAS', 'affective_questionnaire_DES', 
+                                       'affective_questionnaire_affective_grid']).nth(0)
+questionnaires.reset_index(inplace=True)
+
+# Melt the questionnaire columns
+questionnaire_columns = ['affective_questionnaire_SAM', 'affective_questionnaire_PSS', 
+                        'affective_questionnaire_PANAS', 'affective_questionnaire_DES', 
+                        'affective_questionnaire_affective_grid']
+questionnaires_melted = pd.melt(questionnaires, 
+                               id_vars=['paper_id'], 
+                               value_vars=questionnaire_columns,
+                               var_name='Questionnaire',
+                               value_name='Used')
+
+# Clean questionnaire names
+questionnaires_melted['Questionnaire'] = questionnaires_melted['Questionnaire'].str.replace('affective_questionnaire_', '')
+
+# Calculate usage statistics
+questionnaire_usage = questionnaires_melted[questionnaires_melted['Used'] == 'x']['Questionnaire'].value_counts()
+questionnaire_usage_pct = questionnaires_melted[questionnaires_melted['Used'] == 'x']['Questionnaire'].value_counts(normalize=True).mul(100).round(1)
+
+print("\nStandardized Questionnaire Usage:")
+for questionnaire, count in questionnaire_usage.items():
+    percentage = questionnaire_usage_pct[questionnaire]
+    print(f"{questionnaire}: {count} ({percentage}%)")
+
+# 3. Emotional Categories Analysis
+print("\nEmotional Categories Analysis:")
+
+# Get unique category usage per paper
+emotional_categories = [
+    'anger', 'disgust', 'fear', 'sadness', 'surprise', 'happiness', 
+    'pleasant', 'anxiety', 'neutral', 'funny', 'amusement', 'joy',
+    'bored', 'calm', 'calmness', 'cheerful', 'concentration', 'confrustion',
+    'confusion', 'contempt', 'dejection', 'delight', 'depressed', 'engaged',
+    'eureka', 'excited', 'frustration', 'negative', 'nervous', 'positive',
+    'pride', 'relieved', 'sorrow', 'tenderness'
+]
+
+categories_grouped = df_self_report.groupby(['paper_id'] + emotional_categories).nth(0)
+categories_grouped.reset_index(inplace=True)
+
+# Melt the dataframe to get category frequencies
+categories_melted = pd.melt(
+    categories_grouped,
+    id_vars=['paper_id'],
+    value_vars=emotional_categories,
+    var_name='Category',
+    value_name='Used'
+)
+
+# Filter for categories that were used
+categories_used = categories_melted[categories_melted['Used'] == 'x']
+
+# Calculate usage statistics
+category_counts = categories_used['Category'].value_counts()
+category_percentages = categories_used['Category'].value_counts(normalize=True).mul(100).round(1)
+
+print("\nEmotional Categories Usage:")
+print(f"Total number of unique categories used: {len(category_counts)}")
+print("\nTop 10 most used categories:")
+for category, count in category_counts.head(10).items():
+    percentage = category_percentages[category]
+    print(f"{category.capitalize()}: {count} ({percentage}%)")
+
+# 4. Emotional Dimensions Analysis
+print("\nEmotional Dimensions Analysis:")
+
+# Get unique dimension usage per paper
+emotional_dimensions = [
+    'valence', 'arousal', 'dominance', 'like_dislike', 'familiarity',
+    'stress', 'engagement', 'predictability', 'boredom', 'relaxation',
+    'anxiety_dim', 'flow', 'frustration_dim'
+]
+
+dimensions_grouped = df_self_report.groupby(['paper_id'] + emotional_dimensions).nth(0)
+dimensions_grouped.reset_index(inplace=True)
+
+# Melt the dataframe to get dimension frequencies
+dimensions_melted = pd.melt(
+    dimensions_grouped,
+    id_vars=['paper_id'],
+    value_vars=emotional_dimensions,
+    var_name='Dimension',
+    value_name='Used'
+)
+
+# Filter for dimensions that were used
+dimensions_used = dimensions_melted[dimensions_melted['Used'] == 'x']
+
+# Calculate usage statistics
+dimension_counts = dimensions_used['Dimension'].value_counts()
+dimension_percentages = dimensions_used['Dimension'].value_counts(normalize=True).mul(100).round(1)
+
+print("\nEmotional Dimensions Usage:")
+print(f"Total number of unique dimensions used: {len(dimension_counts)}")
+print("\nAll dimensions usage:")
+for dimension, count in dimension_counts.items():
+    percentage = dimension_percentages[dimension]
+    print(f"{dimension.capitalize()}: {count} ({percentage}%)")
+
+# 5. Analysis of Papers Using Both Categories and Dimensions
+print("\nAnalysis of Papers Using Both Categories and Dimensions:")
+
+# Get papers using categories
+papers_with_categories = df_self_report[df_self_report[emotional_categories].isin(['x']).any(axis=1)]['paper_id'].unique()
+papers_with_dimensions = df_self_report[df_self_report[emotional_dimensions].isin(['x']).any(axis=1)]['paper_id'].unique()
+
+# Calculate overlap
+papers_with_both = set(papers_with_categories).intersection(set(papers_with_dimensions))
+papers_with_only_categories = set(papers_with_categories) - set(papers_with_dimensions)
+papers_with_only_dimensions = set(papers_with_dimensions) - set(papers_with_categories)
+
+total_papers = len(df_self_report['paper_id'].unique())
+
+print(f"\nTotal number of papers: {total_papers}")
+print(f"Papers using both categories and dimensions: {len(papers_with_both)} ({len(papers_with_both)/total_papers*100:.1f}%)")
+print(f"Papers using only categories: {len(papers_with_only_categories)} ({len(papers_with_only_categories)/total_papers*100:.1f}%)")
+print(f"Papers using only dimensions: {len(papers_with_only_dimensions)} ({len(papers_with_only_dimensions)/total_papers*100:.1f}%)")
+
+#%%
+# Emotion Elicitation Techniques Analysis
+print("\nEmotion Elicitation Techniques Analysis:")
+
+# Load emotion elicitation techniques data
+df_eet = pd.read_excel(r'.\data\cleaned\Normalized Table - Emotion elicitation techniques.xlsx')
+df_eet.fillna('-', inplace=True)
+
+# 1. Standardized Techniques Analysis
+print("\nStandardized Techniques Analysis:")
+
+# Define standardized techniques and their variants
+standardized_techniques = {
+    'IAPS': ['IAPS', 'IAPS-guided autobiographical conversation'],
+    'TSST': ['TSST', 'Trier social stress test', 'Trier Social Stress Test (TSST)', 'Modified Trier Social Stress Test (TSST)'],
+    'Rapid-ABC': ['Rapid-ABC play protocol'],
+    'Robin': ['Robin'],
+    'AMT': ['Modified Autobiographical Memory Test']
+}
+
+# Load and prepare data
+df_techniques_no_dup = df_eet.drop_duplicates(subset="paper_id")
+df_techniques_no_dup = df_techniques_no_dup.groupby(['paper_id', "technique_name"]).nth(0)
+df_techniques_no_dup.reset_index(inplace=True)
+
+# Initialize counters
+technique_counts = {tech: 0 for tech in standardized_techniques.keys()}
+total_standardized = 0
+
+# Count occurrences of each standardized technique
+for paper_id, row in df_techniques_no_dup.iterrows():
+    technique_name = row['technique_name']
+    if technique_name != '-':
+        found = False
+        for tech, variants in standardized_techniques.items():
+            if any(variant.lower() in technique_name.lower() for variant in variants):
+                technique_counts[tech] += 1
+                total_standardized += 1
+                found = True
+                break
+
+# Calculate percentages
+total_papers = len(df_techniques_no_dup['paper_id'].unique())
+technique_percentages = {tech: (count/total_papers)*100 for tech, count in technique_counts.items()}
+total_percentage = (total_standardized/total_papers)*100
+
+print("\nStandardized Techniques Usage:")
+print(f"Total papers using standardized techniques: {total_standardized} ({total_percentage:.1f}%)")
+print("\nBreakdown by technique:")
+for technique, count in technique_counts.items():
+    percentage = technique_percentages[technique]
+    print(f"{technique}: {count} ({percentage:.1f}%)")
+
+# Create visualization for standardized techniques
+plt.figure(figsize=(10, 6))
+technique_df = pd.DataFrame({
+    'Technique': list(technique_counts.keys()),
+    'Count': list(technique_counts.values())
+})
+sns.barplot(data=technique_df, x='Count', y='Technique')
+plt.title('Standardized Techniques Usage')
+plt.xlabel('Number of Studies')
+plt.tight_layout()
+plt.show()
+
+# 2. Multimodal Analysis
+print("\nMultimodal Analysis:")
+multimodal_counts = df_eet["is_multimodal"].value_counts()
+multimodal_percentages = df_eet["is_multimodal"].value_counts(normalize=True).mul(100).round(1)
+
+print("\nMultimodal Usage:")
+for modality, count in multimodal_counts.items():
+    percentage = multimodal_percentages[modality]
+    print(f"{modality}: {count} ({percentage}%)")
+
+# 3. Task Type Analysis
+print("\nTask Type Analysis:")
+type_task = df_eet.groupby(['paper_id', 'task_type_active', 'task_type_passive']).nth(0)
+type_task.reset_index(inplace=True)
+
+# Count papers with no task type specified
+no_task_type = len(type_task[(type_task['task_type_active'] == '-') & 
+                            (type_task['task_type_passive'] == '-')])
+print(f"\nPapers with no task type specified: {no_task_type}")
+
+# Calculate task type distribution
+task_type = fn.multi_reversing(type_task, 'model_id', type_task[['task_type_active', 'task_type_passive']])
+task_counts = task_type['variable'].value_counts()
+task_percentages = task_type['variable'].value_counts(normalize=True).mul(100).round(1)
+
+print("\nTask Type Distribution:")
+for task, count in task_counts.items():
+    percentage = task_percentages[task]
+    print(f"{task}: {count} ({percentage}%)")
+
+# 4. Modality Analysis
+print("\nModality Analysis:")
+freq_modality = df_eet.groupby(['paper_id', 'is_multimodal', 'modality_visual', 
+                               'modality_auditory', 'modality_somatosensory']).nth(0)
+freq_modality.reset_index(inplace=True)
+
+# Store paper_id before multi_reversing
+paper_ids = freq_modality['paper_id']
+
+df_modality = fn.multi_reversing(freq_modality, 'model_id', 
+                                freq_modality[['is_multimodal', 'modality_visual', 
+                                             'modality_auditory', 'modality_somatosensory']])
+
+# Add paper_id back to the DataFrame
+df_modality['paper_id'] = paper_ids
+
+modality_counts = df_modality['variable'].value_counts()
+modality_percentages = df_modality['variable'].value_counts(normalize=True).mul(100).round(1)
+
+print("\nModality Distribution:")
+for modality, count in modality_counts.items():
+    percentage = modality_percentages[modality]
+    print(f"{modality}: {count} ({percentage}%)")
+
+# 5. Visual Modality Analysis
+print("\nVisual Modality Analysis:")
+visual_modality = df_eet.groupby(['paper_id', 'visual_pictures', 'visual_videos', 
+                                 'visual_words', 'visual_other']).nth(0)
+visual_modality.reset_index(inplace=True)
+
+# Store paper_id before multi_reversing
+paper_ids = visual_modality['paper_id']
+
+df_visual_modality = fn.multi_reversing(visual_modality, 'model_id', 
+                                       visual_modality[['visual_pictures', 'visual_videos', 
+                                                      'visual_words', 'visual_other']])
+
+# Add paper_id back to the DataFrame
+df_visual_modality['paper_id'] = paper_ids
+
+visual_counts = df_visual_modality['variable'].value_counts()
+visual_percentages = df_visual_modality['variable'].value_counts(normalize=True).mul(100).round(1)
+
+print("\nVisual Modality Distribution:")
+for visual, count in visual_counts.items():
+    percentage = visual_percentages[visual]
+    print(f"{visual}: {count} ({percentage}%)")
+
+# 6. Comprehensive Techniques Analysis
+print("\nComprehensive Techniques Analysis:")
+all_techniques = df_eet.groupby(['paper_id', 'visual_pictures', 'visual_videos', 'visual_words', 
+                                'visual_other', 'auditory_music', 'auditory_other',
+                                'technique_clasif_driving',
+                                'technique_clasif_imagination_techniques_or_memory_recall',
+                                'technique_clasif_social_interactions',
+                                'technique_clasif_virtual_reality', 
+                                'technique_clasif_meditation',
+                                'technique_clasif_reading', 'technique_clasif_ux',
+                                'technique_clasif_tactile_enhanced_multimedia_clips',
+                                'technique_clasif_videogame', 
+                                'technique_clasif_puzzle']).nth(0)
+all_techniques.reset_index(inplace=True)
+
+# Store paper_id before multi_reversing
+paper_ids = all_techniques['paper_id']
+
+df_all_techniques = fn.multi_reversing(all_techniques, 'model_id', 
+                                      all_techniques[['visual_pictures', 'visual_videos', 
+                                                     'visual_words', 'visual_other',
+                                                     'auditory_music', 'auditory_other',
+                                                     'technique_clasif_driving',
+                                                     'technique_clasif_imagination_techniques_or_memory_recall',
+                                                     'technique_clasif_social_interactions',
+                                                     'technique_clasif_virtual_reality', 
+                                                     'technique_clasif_meditation',
+                                                     'technique_clasif_reading', 
+                                                     'technique_clasif_ux',
+                                                     'technique_clasif_tactile_enhanced_multimedia_clips',
+                                                     'technique_clasif_videogame', 
+                                                     'technique_clasif_puzzle']])
+
+# Add paper_id back to the DataFrame
+df_all_techniques['paper_id'] = paper_ids
+
+technique_counts = df_all_techniques['variable'].value_counts()
+technique_percentages = df_all_techniques['variable'].value_counts(normalize=True).mul(100).round(1)
+
+print("\nAll Techniques Distribution:")
+for technique, count in technique_counts.items():
+    percentage = technique_percentages[technique]
+    print(f"{technique}: {count} ({percentage}%)")
+
+# 7. Summary Statistics
+print("\nSummary Statistics:")
+total_papers = len(df_eet['paper_id'].unique())
+total_techniques = len(df_all_techniques)
+print(f"Total number of papers analyzed: {total_papers}")
+print(f"Total number of technique instances: {total_techniques}")
+
+# Calculate average techniques per paper
+techniques_per_paper = df_all_techniques.groupby('paper_id').size()
+print(f"Average techniques per paper: {techniques_per_paper.mean():.2f}")
+print(f"Range of techniques per paper: {techniques_per_paper.min()} - {techniques_per_paper.max()}")
+
+# 8. Create visualizations
+print("\nCreating visualizations...")
+
+# Create a figure with subplots
+fig, axes = plt.subplots(2, 2, figsize=(15, 12))
+fig.suptitle('Emotion Elicitation Techniques Analysis', fontsize=16)
+
+# Plot 1: Modality Distribution
+modality_df = pd.DataFrame({
+    'Modality': modality_counts.index,
+    'Count': modality_counts.values
+})
+sns.barplot(data=modality_df, x='Count', y='Modality', ax=axes[0,0])
+axes[0,0].set_title('Modality Distribution')
+axes[0,0].set_xlabel('Number of Studies')
+
+# Plot 2: Visual Modality Distribution
+visual_df = pd.DataFrame({
+    'Visual Type': visual_counts.index,
+    'Count': visual_counts.values
+})
+sns.barplot(data=visual_df, x='Count', y='Visual Type', ax=axes[0,1])
+axes[0,1].set_title('Visual Modality Distribution')
+axes[0,1].set_xlabel('Number of Studies')
+
+# Plot 3: Task Type Distribution
+task_df = pd.DataFrame({
+    'Task Type': task_counts.index,
+    'Count': task_counts.values
+})
+sns.barplot(data=task_df, x='Count', y='Task Type', ax=axes[1,0])
+axes[1,0].set_title('Task Type Distribution')
+axes[1,0].set_xlabel('Number of Studies')
+
+# Plot 4: All Techniques Distribution
+all_tech_df = pd.DataFrame({
+    'Technique': technique_counts.index,
+    'Count': technique_counts.values
+})
+sns.barplot(data=all_tech_df, x='Count', y='Technique', ax=axes[1,1])
+axes[1,1].set_title('All Techniques Distribution')
+axes[1,1].set_xlabel('Number of Studies')
+
+plt.tight_layout()
+plt.show()
+
+#%%
