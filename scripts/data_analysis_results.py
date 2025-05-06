@@ -1621,24 +1621,6 @@ plt.xticks(rotation=45)
 plt.tight_layout()
 plt.show()
 
-# Plotting frequency of specific regression algorithms
-#!! No tiene en cuenta la columna "regre_other"
-df_algoritmos_regre = fn.multi_reversing(df_statistical_learning_models, 'model_id', df_statistical_learning_models.iloc[:,43:60])
-df_algoritmos_regre['variable'] = df_algoritmos_regre['variable'].str.replace('regre_','')
-
-sns.countplot(x='variable', data=df_algoritmos_regre, order = getattr(df_algoritmos_regre, 'variable').value_counts().index, palette="Paired")
-plt.xticks(rotation=90)
-plt.show()
-
-# Plotting frequency of specific classification algorithms
-#!! No tiene en cuenta la columna "class_other"
-df_algoritmos_class = fn.multi_reversing(df_statistical_learning_models, 'model_id', df_statistical_learning_models.iloc[:,8:41])
-df_algoritmos_class['variable'] = df_algoritmos_class['variable'].str.replace('class_','')
-
-sns.countplot(x='variable', data=df_algoritmos_class, order = getattr(df_algoritmos_class, 'variable').value_counts().index, palette="Paired")
-plt.xticks(rotation=90)
-plt.show()
-
 # Others in the regression algorithms
 # Plotting frequency of specific regression algorithms with 'class_other' column
 df_algoritmos_regre = fn.multi_reversing_with_other(
@@ -1652,10 +1634,6 @@ df_algoritmos_regre['model'] = df_algoritmos_regre['model'].str.replace('regre_'
 df_algoritmos_regre = df_algoritmos_regre[~df_algoritmos_regre['model'].str.strip().eq('-')]
 
 algoritmos_de_regresion = df_algoritmos_regre['model'].unique()
-
-titulos = [' ', 'Regre Algorithms', 'Cantidad de modelos']
-fn.bar_plot('model', df_algoritmos_regre, titulos)
-plt.show()
 
 # Others in the classification algorithms
 # Plotting frequency of specific classification algorithms with 'class_other' column
@@ -1671,8 +1649,115 @@ df_algoritmos_class = df_algoritmos_class[~df_algoritmos_class['model'].str.stri
 
 algoritmos_de_clasificacion = df_algoritmos_class['model'].unique()
 
-titulos = [' ', 'Class Algorithms', 'Cantidad de modelos']
-fn.bar_plot('model', df_algoritmos_class, titulos)
+# NEW: Plotting the frequency of specific class algorithms used in the studies
+class_mapping = {
+    'support_vector_machine': 'Support Vector Machine',
+    'tree_based_models': 'Tree-based Models',
+    'adaboost_dt': 'Boosting-based Models',
+    'gradient_boostingclass': 'Boosting-based Models',
+    
+    'k_nearest_neighbor': 'K-Nearest Neighbors',
+
+    'logistic_regression': 'Linear Models',
+    'linear_discriminant_analysis': 'Linear Models',
+    'quadratic_discrimant_classifier': 'Linear Models',
+
+    'naive_bayes': 'Naive Bayes',
+    'GNB (no se si es Gaussian Naive Bayes o algo de boosted': 'Naive Bayes',
+
+    'regre_fully_connected_neuronal_network_or_multi_layer_perceptron': 'Fully-connected Neural Network',
+    'Multi layer perceptron': 'Fully-connected Neural Network',
+    'ann': 'Fully-connected Neural Network',
+    'DNN': 'Fully-connected Neural Network',
+    'Double Deep Q‑learning (DDQ)': 'Fully-connected Neural Network',
+    'backpropagation': 'Fully-connected Neural Network',
+    'LSQC': 'Fully-connected Neural Network',
+
+    'convolutional_neuronal_network': 'Convolutional Neural Network',
+    'cCNN': 'Convolutional Neural Network',
+    'AlexNet': 'Convolutional Neural Network',
+    'VGG16': 'Convolutional Neural Network',
+    'VGG17': 'Convolutional Neural Network',
+
+    'lstm': 'Recurrent Neural Network',
+    'recurrent_neuronal_network': 'Recurrent Neural Network',
+    'gated_recurrent_units': 'Recurrent Neural Network',
+
+    'probabilistic_neural_network': 'Other / Unclear',
+    'radial_basis_function': 'Other / Unclear',
+    'Transformer': 'Other / Unclear',
+    'PhGP': 'Other / Unclear',
+    'spiking_deep_belief_network': 'Other / Unclear',
+    'SEL (Stacking Ensemble Learning)': 'Other / Unclear',
+    'LSLC': 'Other / Unclear',
+    'cellular_neural_networks': 'Other / Unclear',
+    'quantum_neural_network': 'Other / Unclear',
+    'hmm': 'Other / Unclear',
+    '1r_rule': 'Other / Unclear',
+    'y el paper no lo aclara)': 'Other / Unclear'
+}
+
+# NEW: Plotting the frequency of specific regre algorithms used in the studies
+regressor_mapping = {
+    'decision_tree': 'Tree-based Models',
+    'Random Forest': 'Tree-based Models',
+    'boosted_regression_trees': 'Boosting-based Models',
+
+    'linear_regression': 'Linear Models',
+    'ridge_regression': 'Linear Models',
+    'logistic_regression': 'Linear Models',
+    'polynomial_regression': 'Linear Models',
+
+    'knn': 'K-Nearest Neighbors',
+
+    'support_vector_regression': 'Support Vector Regression',
+
+    'fully_connected_neuronal_network_or_multi_layer_perceptron': 'Fully-connected Neural Network',
+    'multilayer_regression': 'Fully-connected Neural Network',
+
+    'convolutional_neuronal_network': 'Convolutional Neural Network',
+    'VGG16': 'Convolutional Neural Network',
+    'ResNet50': 'Convolutional Neural Network',
+
+    'recurrent_neuronal_network': 'Recurrent Neural Network',
+    'lstm': 'Recurrent Neural Network'
+}
+
+df_algoritmos_regre['model_grouped'] = df_algoritmos_regre['model'].map(regressor_mapping)
+sns.countplot(y='model_grouped', data=df_algoritmos_regre, order=df_algoritmos_regre['model_grouped'].value_counts().index)
+
+
+# Set Seaborn style and context
+sns.set_context("talk")
+
+# Obtener los conteos y ordenarlos, dejando "Other / Unclear" al final
+class_counts = df_algoritmos_class['model_grouped'].value_counts()
+regre_counts = df_algoritmos_regre['model_grouped'].value_counts()
+
+class_order = class_counts[class_counts.index != 'Other / Unclear'].sort_values(ascending=False).index.tolist()
+class_order.append('Other / Unclear')
+
+regre_order = regre_counts[regre_counts.index != 'Other / Unclear'].sort_values(ascending=False).index.tolist()
+regre_order.append('Other / Unclear')
+
+# Crear figura con subplots independientes (sin compartir eje Y)
+fig, axes = plt.subplots(1, 2, figsize=(16, 8), dpi=300)
+
+# Subplot A - Clasificadores
+sns.countplot(y='model_grouped', data=df_algoritmos_class, order=class_order, ax=axes[0], palette="tab10")
+axes[0].set_title("A - Classification Algorithms", loc='left', fontsize=28, fontweight='bold')
+axes[0].set_xlabel("Count")
+axes[0].set_ylabel("")
+
+# Subplot B - Regresores
+sns.countplot(y='model_grouped', data=df_algoritmos_regre, order=regre_order, ax=axes[1], palette="tab10")
+axes[1].set_title("B - Regression Algorithms", loc='left', fontsize=28, fontweight='bold')
+axes[1].set_xlabel("Count")
+axes[1].set_ylabel("")
+
+# Ajuste visual final
+plt.tight_layout()
+sns.despine()
 plt.show()
 
 # Plotting frequency of all models
@@ -1814,3 +1899,4 @@ g.set(title=titulos[0], xlabel=titulos[1], ylabel=titulos[2])
 plt.xticks(rotation=90)
 plt.tight_layout()
 plt.show()
+# %%
