@@ -21,6 +21,7 @@ from thefuzz import fuzz
 from matplotlib.patches import Patch
 import re
 import matplotlib.gridspec as gridspec
+import geopandas as gpd
 
 # Importar funciones personalizadas (ajusta el path si es necesario)
 import functions as fn
@@ -121,6 +122,80 @@ plt.xticks(rotation=45)
 plt.tight_layout()
 plt.show()
 
+#%%
+# Crear tabla pivote con conteo de países
+countries = df_metadata_without_duplicates.pivot_table(index=['first_author_country_affiliation'], aggfunc='size')
+df_countries = pd.DataFrame(countries)
+
+# Calcular la suma total de papers por país
+# Usar el nombre de la columna en lugar del índice numérico para evitar KeyError
+total_papers = df_countries['count'].sum() if 'count' in df_countries.columns else df_countries.iloc[:, 0].sum()
+print(f"Suma total de papers por país: {total_papers}")
+
+df_countries.columns = ['count']
+
+
+# Cargamos el GeoDataFrame con geometría de países
+world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
+
+# Renombrar "USA" a "United States of America" en df_countries
+df_countries.rename(index={'USA':'United States of America'}, inplace=True)
+
+# Coordenadas de París
+paris_coords = [2.3522, 48.8566]
+
+# Coordenadas para ajustar Hungría
+slovenia_adjust = [19.5033, 47.1625]
+
+# Filtrar el GeoDataFrame para excluir la Antártida
+world = world[world['name'] != 'Antarctica']
+
+# Fusionamos el GeoDataFrame con tu DataFrame
+world_merged = world.merge(df_countries, how="left", left_on="name", right_index=True)
+
+# Crear el gráfico
+fig, ax = plt.subplots(1, figsize=(20, 12), dpi=300)
+world_merged.boundary.plot(ax=ax, linewidth=0.8, color='grey')
+world_merged.plot(column='count', ax=ax, cmap='Blues',
+                  missing_kwds={"color": "lightgrey"}, linewidth=0.5, edgecolor='black')
+
+for idx, row in world_merged.iterrows():
+    if not pd.isna(row['count']):
+        x, y = row.geometry.centroid.x, row.geometry.centroid.y
+        label = str(int(row['count']))
+        
+        # Ajustes específicos para Francia
+        if row['name'] == 'France':
+            x, y = paris_coords
+        
+        # Tamaño del círculo (20% más grande para China)
+        circle_radius = 3 if row['name'] != 'China' else 3.6
+        
+        circle = plt.Circle((x, y), circle_radius, color='white', ec='black', fill=True, alpha=0.5, linewidth=1.5)
+        ax.add_patch(circle)
+        
+        # Ajuste de la posición de la etiqueta para Slovenia
+        if row['name'] == 'Slovenia':
+            ax.annotate(label, xy=(x, y), xytext=(x + 3, y - 1),
+                        fontsize=14, ha='center', va='center', fontweight='bold')
+        else:
+            ax.text(x, y, label, fontsize=14, ha='center', va='center', fontweight='bold')
+
+
+# Título y barra de color
+plt.title('Number of Articles by Country', fontsize=20, pad=20, fontweight='bold')
+ax.set_axis_off()
+
+sm = plt.cm.ScalarMappable(cmap='Blues', norm=plt.Normalize(vmin=df_countries['count'].min(), vmax=df_countries['count'].max()))
+sm.set_array([])
+
+cbar = fig.colorbar(sm, orientation="horizontal", pad=0.01, shrink=0.5, ax=ax, fraction=0.046)
+cbar.set_label('Number of Articles by Country', fontsize=16, fontweight='bold')
+cbar.ax.tick_params(labelsize=14)
+cbar.ax.set_position([0.1, 0.1, 0.4, 0.02])
+
+plt.show()
+
 #%% 
 # Analysis of Source Titles (Journals/Conferences)
 print("\nSource Title Analysis:")
@@ -166,8 +241,42 @@ plt.xlabel('Source Type')
 plt.ylabel('Number of Papers')
 plt.tight_layout()
 plt.show()
+#%%%
+print(f"Number of journal papers: {journal_count}")
+
+# Analyze journal papers specifically
+print("\nJournal Analysis:")
+journal_papers = df_metadata_without_duplicates[df_metadata_without_duplicates['source_type_journal'] == 'x']
+journal_counts = journal_papers['source_title'].value_counts()
+
+print("\nNumber of papers by journal (in descending order):")
+for journal, count in journal_counts.items():
+    print(f"{journal}: {count}")
+
+# Count papers not in major journals
+major_journals = [
+    'Sensors',
+    'IEEE Transactions on Affective Computing',
+    'IEEE Access', 
+    'Biomedical Signal Processing and Control',
+    'IEEE Journal of Biomedical and Health Informatics',
+    'Frontiers in Neuroscience',
+    'Electronics (Switzerland)',
+    'IEEE Sensors Journal',
+    'Frontiers in ICT',
+    'Studies in health technology and informatics',
+    'Scientific Reports',
+    'Expert Systems with Applications',
+    'IEEE Transactions on Instrumentation and Measurement',
+    'Frontiers in Psychology',
+    'Proceedings of the ACM on Interactive, Mobile, Wearable and Ubiquitous Technologies'
+]
+
+other_journals = journal_papers[~journal_papers['source_title'].isin(major_journals)]
+print(f"\nNumber of papers not in {', '.join(major_journals)}: {len(other_journals)}")
 
 #%% 
+
 # Database Analysis
 print("\nDatabase Analysis:")
 
@@ -1461,7 +1570,7 @@ sns.despine(ax=ax3)
 plt.tight_layout()
 plt.show()
 
-# %%
+#%%
 # Statistical learning models analysis
 print("\nStatistical Learning Models Analysis:")
 
@@ -1578,8 +1687,20 @@ sns.countplot(x='variable', data=df_all_models, order = getattr(df_all_models, '
 plt.xticks(rotation=90)
 plt.show()
 
-#%%
-# 3. Performance analysis
+# Porcentaje de modelos de regresión
+df_algoritmos_regre['model'].value_counts(normalize=True).mul(100).round(2)
+
+# Porcentaje de modelos de clasificación
+df_algoritmos_class['model'].value_counts(normalize=True).mul(100).round(2)
+
+df_models = df_statistical_learning_models[["paper_id","apa_citation",'model', "year", "model_id"]]
+
+df_models = df_models.groupby(
+        ["paper_id",'model']
+        ).nth(0)
+df_models.reset_index(inplace=True)
+
+
 models = df_statistical_learning_models[["paper_id", "year", "affective_model", "model_id"]]
 
 models = models.groupby(
@@ -1589,6 +1710,107 @@ models.reset_index(inplace=True)
 
 models["year"] = models["year"].astype(int)
 
-models["affective_model"].value_counts()
-
 models_crosstab = pd.crosstab(index=models['year'], columns=models['affective_model'],normalize='index')
+
+
+n_models = df_models.groupby(
+        ["paper_id",'model']
+        ).nth(0)
+n_models.reset_index(inplace=True)
+
+n_models["year"] = n_models["year"].astype(int)
+
+n_models_crosstab = pd.crosstab(index=n_models['year'], columns=n_models['model'],normalize='index')
+
+# Plotting Figure 8: Chronological evolution of emotion model types and algorithm usage in emotion recognition research with EDA over a decade
+import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
+import seaborn as sns
+import numpy as np
+
+# Set the context for even bigger fonts
+sns.set_context("talk")
+
+# Create figure with custom GridSpec
+fig = plt.figure(figsize=(10, 10), dpi=300)
+gs = gridspec.GridSpec(2, 1)
+
+# SUBPLOT A
+ax1 = plt.subplot(gs[0, 0])
+(models_crosstab * 100).plot(kind='bar',  
+                            stacked=True,
+                            rot=0,
+                            ax=ax1,
+                            color=['#1f77b4', '#ff7f0e'])
+ax1.set_ylim([0, 100])  # Hasta 100%
+ax1.set_xticklabels(ax1.get_xticklabels())
+plt.xticks(rotation=45)
+ax1.set_yticklabels(ax1.get_yticklabels())
+ax1.set_xlabel("Year")
+ax1.set_ylabel("Percentage of articles (%)")
+ax1.legend(title='Affective model', loc='upper right', bbox_to_anchor=(1, 1.4),
+          frameon=False, fancybox=True, ncol=2, fontsize=18)
+ax1.text(0.0, 1.1, 'A', transform=ax1.transAxes, fontsize=36, fontweight='bold')
+sns.despine(ax=ax1)
+
+# SUBPLOT B
+ax2 = plt.subplot(gs[1, 0])
+(n_models_crosstab * 100).plot(kind='bar',  
+                              stacked=True,
+                              rot=0,
+                              ax=ax2,
+                              color=['#1f77b4', '#ff7f0e'])
+ax2.set_ylim([0, 100])  # Hasta 100%
+ax2.set_xticklabels(ax2.get_xticklabels())
+plt.xticks(rotation=45)
+ax2.set_yticklabels(ax2.get_yticklabels())
+ax2.set_xlabel("Year")
+ax2.set_ylabel("Percentage of articles (%)")
+ax2.legend(title='Type of algorithm', loc='upper right', bbox_to_anchor=(1, 1.4),
+          frameon=False, fancybox=True, ncol=2, fontsize=18)
+ax2.text(0.0, 1.1, 'B', transform=ax2.transAxes, fontsize=36, fontweight='bold')
+sns.despine(ax=ax2)
+
+plt.tight_layout()
+plt.show()
+
+# Percentage of model tpyes used in the studies
+n_models["model"].value_counts(normalize=True).mul(100).round(1).astype(str) + '%'
+
+# Percentage of affective models used in the studies
+models["affective_model"].value_counts(normalize=True).mul(100).round(1).astype(str) + '%'
+
+# 3. Interpretation analysis
+
+model_interpretion = df_statistical_learning_models[df_statistical_learning_models['model_interpretation'] !='-']
+model_interpretation = model_interpretion.groupby(['paper_id', 'model_interpretation']).nth(0)
+
+model_interpretation.reset_index(inplace= True)
+model_interpretation.drop_duplicates(subset = ['paper_id'],inplace=True)
+print(f' En {len(model_interpretation)} papers se realizan interpretaciones emocionales de los modelos')
+
+model_interpretation_list = model_interpretation["paper_id"].to_list()
+model_interpretation_list = [int(a) for a in model_interpretation_list]
+
+df_metadata_filtered = df_metadata[df_metadata['paper_id'].isin(model_interpretation_list)]
+df_metadata_filtered.drop_duplicates("paper_id", inplace= True)
+df_metadata_filtered[["paper_id", "apa_citation", "year", "source_title"]]
+
+
+# Contar cuántas veces aparece cada journal
+journal_counts = df_metadata_filtered['source_title'].value_counts()
+
+# Filtrar para quedarnos solo con los journals con más de una interpretación
+journals_with_multiple = journal_counts[journal_counts > 1].index
+df_metadata_filtered = df_metadata_filtered[df_metadata_filtered['source_title'].isin(journals_with_multiple)]
+
+# Plot
+titulos = [' ', 'Journal', 'Cantidad']
+var_x = "source_title"
+df = df_metadata_filtered
+
+g = sns.countplot(y=var_x, data=df, order=getattr(df, var_x).value_counts().index)
+g.set(title=titulos[0], xlabel=titulos[1], ylabel=titulos[2])
+plt.xticks(rotation=90)
+plt.tight_layout()
+plt.show()
