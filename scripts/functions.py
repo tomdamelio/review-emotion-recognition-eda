@@ -34,3 +34,20 @@ def relaciones(weight):
     # iterar sobre las filas del dataframe
     for i, row in wserie.iterrows():
         print(f"Interacciones con {row[col1]} conexiones se observaron {row[col2]/2} veces.")
+        
+
+def multi_reversing_with_other(df, col_id, col_values, col_other):
+    # 1. Derretir columnas binarias tipo 'x'
+    df_raw = pd.melt(df, id_vars=col_id, value_vars=col_values)
+    df_raw = df_raw[df_raw['value'] == 'x']
+    df_raw = df_raw[[col_id, 'variable']].rename(columns={'variable': 'model'})
+
+    # 2. Expandir 'regre_other' en filas separadas
+    df_other = df[[col_id, col_other]].dropna()
+    df_other['model'] = df_other[col_other].str.split(',\s*')  # separa por coma y espacios
+    df_other = df_other.explode('model')[[col_id, 'model']]
+
+    # 3. Unir ambos
+    df_result = pd.concat([df_raw, df_other], ignore_index=True)
+
+    return df_result

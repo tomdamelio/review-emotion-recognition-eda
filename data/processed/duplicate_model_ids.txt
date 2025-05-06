@@ -1,0 +1,373 @@
+Papers with duplicate model_ids:
+
+Paper ID: 109
+Citation: Bota, P., Zhang, T., El Ali, A., Fred, A., da Silva, H. P., & Cesar, P. (2023). Group synchrony for emotion recognition using physiological signals. IEEE Transactions on Affective Computing, 14(4), 2614-2625.
+Entries:
+  Model ID: 1.0
+  N: 40
+  ML Model: ann
+
+  Model ID: 1.0
+  N: 32
+  ML Model: ann
+
+  Model ID: 2.0
+  N: 40
+  ML Model: support_vector_machine
+
+  Model ID: 2.0
+  N: 32
+  ML Model: support_vector_machine
+
+  Model ID: 3.0
+  N: 40
+  ML Model: naive_bayes
+
+  Model ID: 3.0
+  N: 32
+  ML Model: naive_bayes
+
+  Model ID: 4.0
+  N: 40
+  ML Model: tree_based_models
+
+  Model ID: 4.0
+  N: 32
+  ML Model: tree_based_models
+
+  Model ID: 5.0
+  N: 40
+  ML Model: ann
+
+  Model ID: 5.0
+  N: 32
+  ML Model: ann
+
+  Model ID: 6.0
+  N: 40
+  ML Model: support_vector_machine
+
+  Model ID: 6.0
+  N: 32
+  ML Model: support_vector_machine
+
+  Model ID: 7.0
+  N: 40
+  ML Model: naive_bayes
+
+  Model ID: 7.0
+  N: 32
+  ML Model: naive_bayes
+
+  Model ID: 8.0
+  N: 40
+  ML Model: tree_based_models
+
+  Model ID: 8.0
+  N: 32
+  ML Model: tree_based_models
+
+--------------------------------------------------------------------------------
+
+Paper ID: 138
+Citation: Chen, P., Zou, B., Belkacem, A. N., Lyu, X., Zhao, X., Yi, W., ... & Chen, C. (2022). An improved multi-input deep convolutional neural network for automatic emotion recognition. Frontiers in Neuroscience, 16, 965871.
+Entries:
+  Model ID: 25.0
+  N: 40
+  ML Model: convolutional_neuronal_network
+
+  Model ID: 25.0
+  N: 58
+  ML Model: convolutional_neuronal_network
+
+  Model ID: 25.0
+  N: 27
+  ML Model: convolutional_neuronal_network
+
+  Model ID: 25.0
+  N: 62
+  ML Model: convolutional_neuronal_network
+
+  Model ID: 26.0
+  N: 40
+  ML Model: support_vector_machine
+
+  Model ID: 26.0
+  N: 58
+  ML Model: support_vector_machine
+
+  Model ID: 26.0
+  N: 27
+  ML Model: support_vector_machine
+
+  Model ID: 26.0
+  N: 62
+  ML Model: support_vector_machine
+
+  Model ID: 27.0
+  N: 40
+  ML Model: tree_based_models
+
+  Model ID: 27.0
+  N: 58
+  ML Model: tree_based_models
+
+  Model ID: 27.0
+  N: 27
+  ML Model: tree_based_models
+
+  Model ID: 27.0
+  N: 62
+  ML Model: tree_based_models
+
+  Model ID: 28.0
+  N: 40
+  ML Model: k_nearest_neighbor
+
+  Model ID: 28.0
+  N: 58
+  ML Model: k_nearest_neighbor
+
+  Model ID: 28.0
+  N: 27
+  ML Model: k_nearest_neighbor
+
+  Model ID: 28.0
+  N: 62
+  ML Model: k_nearest_neighbor
+
+--------------------------------------------------------------------------------
+
+Paper ID: 142
+Citation: Perry Fordson, H., Xing, X., Guo, K., & Xu, X. (2022). Emotion recognition with knowledge graph based on electrodermal activity. Frontiers in Neuroscience, 16, 911767.
+Entries:
+  Model ID: 34.0
+  N: 32
+  ML Model: support_vector_machine
+
+  Model ID: 34.0
+  N: 24
+  ML Model: support_vector_machine
+
+  Model ID: 35.0
+  N: 32
+  ML Model: k_nearest_neighbor
+
+  Model ID: 35.0
+  N: 24
+  ML Model: k_nearest_neighbor
+
+  Model ID: 36.0
+  N: 32
+  ML Model: tree_based_models
+
+  Model ID: 36.0
+  N: 24
+  ML Model: tree_based_models
+
+  Model ID: 37.0
+  N: 32
+  ML Model: naive_bayes
+
+  Model ID: 37.0
+  N: 24
+  ML Model: naive_bayes
+
+  Model ID: 38.0
+  N: 32
+  ML Model: regre_fully_connected_neuronal_network_or_multi_layer_perceptron
+
+  Model ID: 38.0
+  N: 24
+  ML Model: regre_fully_connected_neuronal_network_or_multi_layer_perceptron
+
+  Model ID: 39.0
+  N: 32
+  ML Model: support_vector_machine
+
+  Model ID: 39.0
+  N: 24
+  ML Model: support_vector_machine
+
+  Model ID: 40.0
+  N: 32
+  ML Model: k_nearest_neighbor
+
+  Model ID: 40.0
+  N: 24
+  ML Model: k_nearest_neighbor
+
+  Model ID: 41.0
+  N: 32
+  ML Model: tree_based_models
+
+  Model ID: 41.0
+  N: 24
+  ML Model: tree_based_models
+
+  Model ID: 42.0
+  N: 32
+  ML Model: naive_bayes
+
+  Model ID: 42.0
+  N: 24
+  ML Model: naive_bayes
+
+  Model ID: 43.0
+  N: 32
+  ML Model: regre_fully_connected_neuronal_network_or_multi_layer_perceptron
+
+  Model ID: 43.0
+  N: 24
+  ML Model: regre_fully_connected_neuronal_network_or_multi_layer_perceptron
+
+--------------------------------------------------------------------------------
+
+Paper ID: 150
+Citation: Yin, G., Sun, S., Yu, D., Li, D., & Zhang, K. (2022). A multimodal framework for large-scale emotion recognition by fusing music and electrodermal activity signals. ACM Transactions on Multimedia Computing, Communications, and Applications (TOMM), 18(3), 1-23.
+Entries:
+  Model ID: 45.0
+  N: 32
+  ML Model: regre_fully_connected_neuronal_network_or_multi_layer_perceptron
+
+  Model ID: 45.0
+  N: 40
+  ML Model: regre_fully_connected_neuronal_network_or_multi_layer_perceptron
+
+  Model ID: 45.0
+  N: 457
+  ML Model: regre_fully_connected_neuronal_network_or_multi_layer_perceptron
+
+  Model ID: 46.0
+  N: 32
+  ML Model: regre_fully_connected_neuronal_network_or_multi_layer_perceptron
+
+  Model ID: 46.0
+  N: 40
+  ML Model: regre_fully_connected_neuronal_network_or_multi_layer_perceptron
+
+  Model ID: 46.0
+  N: 457
+  ML Model: regre_fully_connected_neuronal_network_or_multi_layer_perceptron
+
+  Model ID: 47.0
+  N: 32
+  ML Model: support_vector_machine
+
+  Model ID: 47.0
+  N: 40
+  ML Model: support_vector_machine
+
+  Model ID: 47.0
+  N: 457
+  ML Model: support_vector_machine
+
+  Model ID: 48.0
+  N: 32
+  ML Model: regre_fully_connected_neuronal_network_or_multi_layer_perceptron
+
+  Model ID: 48.0
+  N: 40
+  ML Model: regre_fully_connected_neuronal_network_or_multi_layer_perceptron
+
+  Model ID: 48.0
+  N: 457
+  ML Model: regre_fully_connected_neuronal_network_or_multi_layer_perceptron
+
+--------------------------------------------------------------------------------
+
+Paper ID: 173
+Citation: Kumar P, S., & Fredo Agastinose Ronickom, J. (2025). Emotion Classification Through Optimal Segments of EDA and Texture Analysis of Time-Encoded Images With Artificial Intelligence. IEEE Transactions on Instrumentation Measurement, 74, 3500058.
+Entries:
+  Model ID: 71.0
+  N: 30
+  ML Model: logistic_regression
+
+  Model ID: 71.0
+  N: 15
+  ML Model: logistic_regression
+
+  Model ID: 72.0
+  N: 30
+  ML Model: tree_based_models
+
+  Model ID: 72.0
+  N: 15
+  ML Model: tree_based_models
+
+  Model ID: 73.0
+  N: 30
+  ML Model: gradient_boostingclass
+
+  Model ID: 73.0
+  N: 15
+  ML Model: gradient_boostingclass
+
+  Model ID: 74.0
+  N: 30
+  ML Model: regre_fully_connected_neuronal_network_or_multi_layer_perceptron
+
+  Model ID: 74.0
+  N: 15
+  ML Model: regre_fully_connected_neuronal_network_or_multi_layer_perceptron
+
+--------------------------------------------------------------------------------
+
+Paper ID: 174
+Citation: Liu, Y., Jia, Z., & Wang, H. (2023, October). Emotionkd: a cross-modal knowledge distillation framework for emotion recognition based on physiological signals. In Proceedings of the 31st ACM International Conference on Multimedia (pp. 6122-6131).
+Entries:
+  Model ID: 75.0
+  N: 32
+  ML Model: Transformer
+
+  Model ID: 75.0
+  N: 27
+  ML Model: Transformer
+
+  Model ID: 76.0
+  N: 32
+  ML Model: Transformer
+
+  Model ID: 76.0
+  N: 27
+  ML Model: Transformer
+
+--------------------------------------------------------------------------------
+
+Paper ID: 182
+Citation: Elalamy, R., Fanourakis, M., & Chanel, G. (2021, September). Multi-modal emotion recognition using recurrence plots and transfer learning on physiological signals. In 2021 9th International Conference on Affective Computing and Intelligent Interaction (ACII) (pp. 1-7). IEEE.
+Entries:
+  Model ID: 77.0
+  N: 32
+  ML Model: logistic_regression
+
+  Model ID: 77.0
+  N: 40
+  ML Model: logistic_regression
+
+  Model ID: 78.0
+  N: 32
+  ML Model: logistic_regression
+
+  Model ID: 78.0
+  N: 40
+  ML Model: logistic_regression
+
+  Model ID: 79.0
+  N: 32
+  ML Model: logistic_regression
+
+  Model ID: 79.0
+  N: 40
+  ML Model: logistic_regression
+
+  Model ID: 80.0
+  N: 32
+  ML Model: logistic_regression
+
+  Model ID: 80.0
+  N: 40
+  ML Model: logistic_regression
+
+--------------------------------------------------------------------------------
+

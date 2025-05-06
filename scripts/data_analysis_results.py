@@ -22,7 +22,6 @@ from matplotlib.patches import Patch
 import re
 import matplotlib.gridspec as gridspec
 
-#%% 
 # Importar funciones personalizadas (ajusta el path si es necesario)
 import functions as fn
 
@@ -56,6 +55,7 @@ print(country_counts)
 # Mostrar el total de países únicos
 print(f"\nTotal de países únicos: {len(country_counts)}")
 
+print(f"\n Lista de países únicos: {country_counts.index.tolist()}")
 #%% 
 # Clasificación de países por continente
 asia_countries = ['China', 'India', 'Japan', 'South Korea', 'Malaysia', 'Pakistan', 'Taiwan', 
@@ -1157,3 +1157,438 @@ plt.tight_layout()
 plt.show()
 
 #%%
+#%%
+# Electrodermal Activity (EDA) Analysis
+print("\nElectrodermal Activity (EDA) Analysis:")
+
+# Load EDA data
+df_eda = pd.read_excel(r'.\data\cleaned\Normalized Table - EDA.xlsx')
+df_eda.fillna('-', inplace=True)
+
+# 1. EDA Device Analysis
+eda_devices = df_eda[~((df_eda['eda_device_specification'] == '-') &
+      (df_eda['eda_device_is_homemade'] == '-'))         
+]
+
+# Count papers with no device specified (but some are homemade)
+aver = df_eda.groupby(['paper_id', 'eda_device_specification']).nth(0)
+aver.reset_index(inplace= True)
+len(aver[aver['eda_device_specification'] == '-'])
+
+# Percentage of papers with no device specified and not homemade
+((len(df_eda)-len(eda_devices)) / len(df_eda)) * 100
+
+# Group by paper_id and get first occurrence of each device
+eda_devices = eda_devices.groupby(['paper_id', 'eda_device_specification']).nth(0)
+eda_devices.reset_index(inplace=True)
+
+# Count papers with homemade devices
+eda_devices['eda_device_is_homemade'].value_counts()
+eda_devices['eda_device_is_homemade'].value_counts(normalize=True).mul(100).round(1).astype(str) + '%'
+
+# Map EDA devices to standardized names
+mapping_eda = {
+    # —— BIOPAC ——————————————————————————
+    'BIOPAC': 'BIOPAC', 'BIOPAC MP150': 'BIOPAC',
+    'BIOPAC MP150 with EDA100C module': 'BIOPAC',
+    'BIOPAC MP160': 'BIOPAC', 'BIOPAC MP35': 'BIOPAC',
+    'BIOPAC MP36': 'BIOPAC', 'BIOPAC-MP150': 'BIOPAC',
+    "BIOPAC’s MP150": 'BIOPAC', 'Biopac': 'BIOPAC',
+    'Biopac\nMP36': 'BIOPAC', 'Biopac MP 150 system': 'BIOPAC',
+    'Biopac MP150': 'BIOPAC', 'MP150': 'BIOPAC',
+    'MP150 BIOPAC': 'BIOPAC', 'MP150 BIOPAC system': 'BIOPAC',
+    'MP150 Biopac': 'BIOPAC', 'MP35 Biopac': 'BIOPAC',
+
+    # —— Biosemi ActiveTwo ——————————————————
+    'Biosemi ActiveTwo': 'Biosemi ActiveTwo',
+    'Biosemi ActiveTwo (GSR channel) \u200b': 'Biosemi ActiveTwo',
+    'Biosemi ActiveTwo system\u200b\u200b': 'Biosemi ActiveTwo',
+    'Biosemi activeTwo': 'Biosemi ActiveTwo',
+
+    # —— Affectiva Q‑Sensor —————————————
+    'Affectiva ': 'Affectiva Q Sensor',
+    'Affectiva Q1 sensor': 'Affectiva Q Sensor',
+    'Affectiva-QSensors5': 'Affectiva Q Sensor',
+    'Four Affectiva Q-sensors': 'Affectiva Q Sensor',
+    'Q Sensor by Afectiva': 'Affectiva Q Sensor',
+
+    # —— PowerLab ————————————————————————
+    'PowerLab': 'PowerLab',
+    'PowerLab (manufactured\nby ADInstruments)': 'PowerLab',
+
+    # —— Shimmer ——————————————————————————
+    'Shimmer': 'Shimmer',
+    'Shimmer 2R': 'Shimmer',
+    'Shimmer 2R GSR module': 'Shimmer',
+    'Shimmer 3 GSR+ Unit': 'Shimmer',
+    'Shimmer GSR': 'Shimmer',
+    'Shimmer GSR+Unit2': 'Shimmer',
+    'Shimmer module': 'Shimmer',
+    'Shimmer3': 'Shimmer',
+    'Shimmer3\nGSR+': 'Shimmer',
+    'Shimmer3 EDA+': 'Shimmer',
+    'Shimmer3 GSR': 'Shimmer',
+    'Shimmer3 GSR+': 'Shimmer',
+    'Shimmer3 GSR+ Unit': 'Shimmer',
+    'Shimmer3 GSR+ Unit sensor': 'Shimmer',
+
+    # —— Nexus (MindMedia) ——————————————
+    'Nexus-10': 'NEXUS',
+    'Nexus 4 Biofeedback system3': 'NEXUS',
+    'Nexus-32': 'NEXUS',
+    'NeXus-32 amplifier': 'NEXUS',
+
+    # —— ProComp Infiniti ——————————————
+    'ProComp Infiniti': 'ProComp Infiniti',
+    'ProComp Infinity': 'ProComp Infiniti',
+    'Procomp Infiniti Encoder': 'ProComp Infiniti',
+    'Procomp5 Infiniti': 'ProComp Infiniti',
+
+    # —— BioRadio ————————————————————————
+    'BioRadio 150': 'BioRadio 150',
+    'BioRadio 150 wireless sensor': 'BioRadio 150',
+
+    # —— Grove GSR ————————————————————————
+    'Grove': 'Grove',
+    'Grove\n(a standalone LM324 quadruple operational amplifier based on EDA sensor kit)': 'Grove',
+    'Grove 1.2': 'Grove',
+    'Grove GSR sensor produced by Seeed': 'Grove',
+
+    # —— Homemade & específicos ——————————
+    'Custom': 'Homemade (unspecified)',
+    '-': 'Homemade (unspecified)',
+    'Self-customised skin sensor': 'Homemade (unspecified)',
+
+    'Custom iFidgetCube (Arduino MCU + PPG & EDA sensors)': 'iFidgetCube',
+    'Bluno Beetle BLE board with an ATMega328P@16Mhz microprocessor and Bluetooth capability integrated into the board with the TI CC2540 chip.': 'Bluno Beetle BLE',
+
+    'LabVIEW': 'LabVIEW DAQ',
+
+    'Commercial bluetooth GSR sensor': 'Commercial BT GSR',
+    'Commercial bluetooth sensor': 'Commercial BT GSR',
+
+    # —— Otros dispositivos individuales ——
+    '(BITalino (r)evolution Plugged\nKit BT': 'BITalino (r)evolution Plugged Kit BT',
+    'Biosignalplux': 'Biosignalplux',
+    'Bodymedia': 'BodyMedia',
+    'Empatica E4': 'Empatica',
+    'Empatica\u202fE4': 'Empatica',
+    'ErgoLAB EDA Wireless Skin Conductance Sensor': 'ErgoLAB Wireless EDA',
+    'Ergosensing wristband (ES1)': 'Ergosensing ES1',
+    'GSR-2': 'GSR2', 'GSR2': 'GSR2',
+    'Gen II integrated wearable device from Analog Devices, Inc': 'Gen II Analog Devices',
+    'HKR-11C+': 'HKR-11C+',
+    'Microsoft Band 2': 'Microsoft Band 2',
+    'Mindfield eSense': 'Mindfield eSense',
+    'Other': 'Other',
+    'Sociograph': 'Sociograph', 'Sociograph\n': 'Sociograph',
+    'Sudologger 3 device': 'Sudologger 3',
+    'Thought Technology SA9309M (GSR sensor)': 'Thought Technology',
+    'sensors produced by Thought Technology': 'Thought Technology',
+    'Varioport': 'Varioport', 'Varioport-B': 'Varioport',
+    'e-Health Sensor\nPlatform V2.0': 'e-Health Sensor Platform V2.0',
+    'imec': 'imec',
+}
+
+# Replace device specifications with standardized names
+eda_devices['eda_device_specification'] = (
+    eda_devices['eda_device_specification'].replace(mapping_eda)
+)
+
+# Count unique devices
+eda_devices['eda_device_specification'].value_counts()
+eda_devices['eda_device_specification'].value_counts(normalize=True).mul(100).round(1).astype(str) + '%'
+
+n_dispositivos_eda = eda_devices['eda_device_specification'].nunique()
+print (f'Se utilizaron {n_dispositivos_eda} dispositivos de EDA diferentes')
+
+
+# Plot EDA devices
+from turtle import width
+
+
+plt.figure(figsize = (23,16))
+sns.set_context('paper')
+sns.countplot(y = 'eda_device_specification',
+            data = eda_devices,
+            order = eda_devices['eda_device_specification'].value_counts().index)
+plt.ylabel('Device',
+            fontsize = 24,
+            fontweight = 'bold')
+plt.xlabel('')
+plt.yticks(fontsize = 25)
+plt.xticks(ticks = range(1,19), fontsize = 23)
+plt.show()
+
+
+# Filter devices with 1 or fewer occurrences
+devices_with_others = eda_devices.copy()
+device_counts = devices_with_others['eda_device_specification'].value_counts()
+
+low_freq_devices = device_counts[device_counts <= 1].index
+mapping_others = {device: 'Others' for device in low_freq_devices}
+
+devices_with_others['eda_device_specification'] = (
+    devices_with_others['eda_device_specification'].replace(mapping_others)
+)
+
+# Plot EDA devices with "Others" category
+sns.set_context('poster')
+
+name_changes = {
+    "Affectiva Q Sensor": "Affectiva Q-Sensor",
+    "NEXUS": "NeXuS",
+}
+
+# Update name changes in DataFrame
+devices_with_others['eda_device_specification'].replace(name_changes, inplace=True)
+
+# Update the plot_order list
+counts = devices_with_others['eda_device_specification'].value_counts()
+plot_order = counts[counts.index != 'Others'].index.tolist() + ['Others']
+
+#Plot
+plt.figure(figsize = (20,10))
+sns.countplot(y = 'eda_device_specification',
+              data = devices_with_others,
+              order = plot_order,
+              palette = "tab10")
+plt.ylabel('EDA Device', fontsize = 23, fontweight = 'bold')
+plt.xlabel('Frequency of papers', fontsize = 23)
+plt.yticks(fontsize = 24)
+plt.xticks(ticks = range(0, counts.max(),5), fontsize = 22)
+
+sns.despine()
+
+plt.show()
+
+
+# 2. EDA Location Analysis
+df_eda['location_hemibody'] = df_eda['location_hemibody'].replace({'non-dominant': 'not dominant'})
+
+hemibody = df_eda.groupby(['paper_id', 'location_hemibody']).nth(0)
+hemibody.reset_index(inplace=True)
+
+# Count papers with no hemibody specified
+hemibody['location_hemibody'].value_counts()
+hemibody['location_hemibody'].value_counts(normalize=True).mul(100).round(1).astype(str) + '%'
+
+# Frequency of hemibody placements
+hemibody_only_reported = hemibody[hemibody['location_hemibody'] != "-"]
+hemibody_only_reported['location_hemibody'].value_counts(normalize=True).mul(100).round(1).astype(str) + '%'
+
+
+sensors = df_eda.groupby(['paper_id','is_hands','wrist', 'chest',
+                    'finger_thumb', 'finger_index', 'finger_middle', 'finger_ring', 'finger_little',
+                     'phalange_proximal', 'phalange_medial','phalange_distal',
+                     ]).nth(0)
+sensors.reset_index(inplace= True)
+
+sensors_location = df_eda.groupby(['paper_id','is_hands','wrist', 'chest']).nth(0)
+sensors_location.reset_index(inplace = True)
+
+# Percentage of papers with no sensor location specified
+(len(sensors[(sensors['is_hands'] == '-') &
+            (sensors['wrist'] == '-') &
+            (sensors['chest'] == '-')]) / len(sensors)) * 100
+
+# Frequency of sensor locations
+general_place = fn.multi_reversing(sensors, 'model_id',sensors[['is_hands','wrist', 'chest']])
+general_place['variable'].value_counts()
+general_place['variable'].value_counts(normalize=True).mul(100).round(1).astype(str) + '%'
+
+# Frequency of finger sensors
+finger_sensor = fn.multi_reversing(sensors, 'model_id',sensors[['finger_thumb', 'finger_index', 'finger_middle', 'finger_ring', 'finger_little']])
+finger_sensor['variable'].value_counts()
+finger_sensor['variable'].value_counts(normalize=True).mul(100).round(1).astype(str) + '%'
+
+# Frequency of phalange sensors
+location_phalanges = fn.multi_reversing(sensors, 'model_id',sensors[['phalange_proximal', 'phalange_medial','phalange_distal']])
+location_phalanges['variable'].value_counts()
+location_phalanges['variable'].value_counts(normalize=True).mul(100).round(1).astype(str) + '%'
+
+
+# Rename finger sensors for plotting
+finger_sensor['variable'] = finger_sensor['variable'].str.replace('finger_middle','Middle')
+finger_sensor['variable'] = finger_sensor['variable'].str.replace('finger_index','Index')
+finger_sensor['variable'] = finger_sensor['variable'].str.replace('finger_ring','Ring')
+finger_sensor['variable'] = finger_sensor['variable'].str.replace('finger_thumb','Thumb')
+finger_sensor['variable'] = finger_sensor['variable'].str.replace('finger_little','Little')
+
+# Set the context for even bigger fonts
+sns.set_context("talk")
+
+# Create figure with custom GridSpec
+fig = plt.figure(figsize=(16, 8), dpi=300)
+gs = gridspec.GridSpec(1, 3)
+
+
+new_labels_ax1 = ['Left', 'Right', 'Not dominant', 'Dominant']
+new_labels_ax2 = ['Hand', 'Wrist', 'Chest']
+
+# SUBPLOT A
+ax1 = plt.subplot(gs[0, 0])
+plot_order = ['left', 'right', 'not dominant', 'dominant']
+sns.countplot(x='location_hemibody', data=hemibody, order=plot_order, ax=ax1, palette="tab10")
+ax1.set_title('Hemibody Location', fontweight='bold')
+ax1.set_ylabel("Frequency")
+ax1.set_xticklabels(new_labels_ax1, rotation=45)
+ax1.text(-0.1, 1.1, 'A', transform=ax1.transAxes, fontsize=36, fontweight='bold')
+ax1.set_xlabel('')
+sns.despine(ax=ax1)
+
+# SUBPLOT B
+ax2 = plt.subplot(gs[0, 1])
+sns.countplot(x='variable', data=general_place, ax=ax2, palette="tab10")
+ax2.set_title('Location of Electrodes in the Body', fontweight='bold')
+ax2.set_ylabel("Frequency")
+ax2.set_xticklabels(new_labels_ax2, rotation=45)
+ax2.text(-0.1, 1.1, 'B', transform=ax2.transAxes, fontsize=36, fontweight='bold')
+ax2.set_xlabel('')
+sns.despine(ax=ax2)
+
+# SUBPLOT C
+ax3 = plt.subplot(gs[0, 2])
+sns.countplot(x='variable', data=finger_sensor, ax=ax3, palette="tab10")
+ax3.set_title('Location of Electrodes in the Hand', fontweight='bold')
+ax3.set_ylabel("Frequency")
+ax3.set_xticklabels(ax3.get_xticklabels(), rotation=45)
+ax3.text(-0.1, 1.1, 'C', transform=ax3.transAxes, fontsize=36, fontweight='bold')
+ax3.set_xlabel('')
+sns.despine(ax=ax3)
+
+# Tight layout and show
+plt.tight_layout()
+plt.show()
+
+# %%
+# Statistical learning models analysis
+print("\nStatistical Learning Models Analysis:")
+
+# Load EDA data
+df_statistical_learning_models  = pd.read_excel(r'.\data\cleaned\Normalized Table - Statistical learning model - Performances.xlsx')
+df_statistical_learning_models.fillna('-', inplace=True)
+
+# 1. Affective model analysis
+df_statistical_learning_models=df_statistical_learning_models[df_statistical_learning_models['affective_model'].isin(['categorical', 'dimensional'])]
+df_statistical_learning_models_0 = df_statistical_learning_models.groupby(['paper_id','affective_model']).nth(0)
+df_statistical_learning_models_0.reset_index(inplace=True)
+df_statistical_learning_models_0["year"] = df_statistical_learning_models_0["year"].astype(int)
+df_statistical_learning_models_0
+
+# Plotting the number of papers per year and affective model
+category_order = [2010, 2011, 2012, 2013, 2014, 2015, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025]
+g= sns.countplot(x='year', 
+    data= df_statistical_learning_models_0, 
+    hue='affective_model', 
+    order=category_order)
+g.set(xlabel = 'Año', ylabel = 'Cantidad de papers')
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.show()
+
+
+# 2. Models analysis
+def label_model (row):
+   if row['is_classifier'] == "x" :
+      return 'classifier'
+   if row['is_regressor'] == "x" :
+      return 'regressor'
+   return 'Other'
+
+df_statistical_learning_models['model']  = df_statistical_learning_models.apply(lambda row: label_model(row), axis=1)
+df_statistical_learning_models['model'].value_counts()
+
+df_models = df_statistical_learning_models[["apa_citation",'model', "year", "model_id"]]
+
+# Plotting the number of papers per year and model
+category_order = [2010, 2011, 2012, 2013, 2014, 2015, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025]
+g= sns.countplot(x='year', 
+    data= df_models, 
+    hue='model', 
+    order=category_order)
+g.set(xlabel = 'Año', ylabel = 'Cantidad de modelos')
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.show()
+
+# Plotting frequency of specific regression algorithms
+#!! No tiene en cuenta la columna "regre_other"
+df_algoritmos_regre = fn.multi_reversing(df_statistical_learning_models, 'model_id', df_statistical_learning_models.iloc[:,43:60])
+df_algoritmos_regre['variable'] = df_algoritmos_regre['variable'].str.replace('regre_','')
+
+sns.countplot(x='variable', data=df_algoritmos_regre, order = getattr(df_algoritmos_regre, 'variable').value_counts().index, palette="Paired")
+plt.xticks(rotation=90)
+plt.show()
+
+# Plotting frequency of specific classification algorithms
+#!! No tiene en cuenta la columna "class_other"
+df_algoritmos_class = fn.multi_reversing(df_statistical_learning_models, 'model_id', df_statistical_learning_models.iloc[:,8:41])
+df_algoritmos_class['variable'] = df_algoritmos_class['variable'].str.replace('class_','')
+
+sns.countplot(x='variable', data=df_algoritmos_class, order = getattr(df_algoritmos_class, 'variable').value_counts().index, palette="Paired")
+plt.xticks(rotation=90)
+plt.show()
+
+# Others in the regression algorithms
+# Plotting frequency of specific regression algorithms with 'class_other' column
+df_algoritmos_regre = fn.multi_reversing_with_other(
+    df_statistical_learning_models, 
+    'model_id', 
+    df_statistical_learning_models.columns[43:60],
+    df_statistical_learning_models.columns[59]     # columna "class_other"
+)
+
+df_algoritmos_regre['model'] = df_algoritmos_regre['model'].str.replace('regre_', '', regex=False)
+df_algoritmos_regre = df_algoritmos_regre[~df_algoritmos_regre['model'].str.strip().eq('-')]
+
+algoritmos_de_regresion = df_algoritmos_regre['model'].unique()
+
+titulos = [' ', 'Regre Algorithms', 'Cantidad de modelos']
+fn.bar_plot('model', df_algoritmos_regre, titulos)
+plt.show()
+
+# Others in the classification algorithms
+# Plotting frequency of specific classification algorithms with 'class_other' column
+df_algoritmos_class = fn.multi_reversing_with_other(
+    df_statistical_learning_models, 
+    'model_id', 
+    df_statistical_learning_models.columns[8:41],
+    df_statistical_learning_models.columns[41]     # columna "class_other"
+)
+
+df_algoritmos_class['model'] = df_algoritmos_class['model'].str.replace('class_', '', regex=False)
+df_algoritmos_class = df_algoritmos_class[~df_algoritmos_class['model'].str.strip().eq('-')]
+
+algoritmos_de_clasificacion = df_algoritmos_class['model'].unique()
+
+titulos = [' ', 'Class Algorithms', 'Cantidad de modelos']
+fn.bar_plot('model', df_algoritmos_class, titulos)
+plt.show()
+
+# Plotting frequency of all models
+df_all_models = df_statistical_learning_models.iloc[:,1:57]
+df_all_models.drop(df_all_models.columns[[1,2,3,4,5,6,39,40,41]], axis=1, inplace=True)
+
+df_all_models = fn.multi_reversing(df_all_models, 'model_id', df_all_models.iloc[:,1:])
+df_all_models['variable'] = df_all_models['variable'].str.replace('class_','')
+df_all_models['variable'] = df_all_models['variable'].str.replace('regre_','')
+
+sns.countplot(x='variable', data=df_all_models, order = getattr(df_all_models, 'variable').value_counts().index, palette="Paired")
+plt.xticks(rotation=90)
+plt.show()
+
+#%%
+# 3. Performance analysis
+models = df_statistical_learning_models[["paper_id", "year", "affective_model", "model_id"]]
+
+models = models.groupby(
+        ["paper_id",'affective_model']
+        ).nth(0)
+models.reset_index(inplace=True)
+
+models["year"] = models["year"].astype(int)
+
+models["affective_model"].value_counts()
+
+models_crosstab = pd.crosstab(index=models['year'], columns=models['affective_model'],normalize='index')
