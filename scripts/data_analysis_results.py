@@ -1761,6 +1761,12 @@ df_statistical_learning_models_0.reset_index(inplace=True)
 df_statistical_learning_models_0["year"] = df_statistical_learning_models_0["year"].astype(int)
 df_statistical_learning_models_0
 
+# Calculate overall percentage of dimensional vs categorical models
+affective_model_percentages = df_statistical_learning_models_0['affective_model'].value_counts(normalize=True).mul(100).round(1)
+print("\nAffective model distribution:")
+print(affective_model_percentages)
+print(f"Dimensional models account for {affective_model_percentages['dimensional']}% of all models used")
+
 # Plotting the number of papers per year and affective model
 category_order = [2010, 2011, 2012, 2013, 2014, 2015, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025]
 g= sns.countplot(x='year', 
@@ -1782,7 +1788,14 @@ def label_model (row):
    return 'Other'
 
 df_statistical_learning_models['model']  = df_statistical_learning_models.apply(lambda row: label_model(row), axis=1)
-df_statistical_learning_models['model'].value_counts()
+model_counts = df_statistical_learning_models['model'].value_counts()
+model_percentages = df_statistical_learning_models['model'].value_counts(normalize=True).mul(100).round(1)
+
+print("\nModel type distribution:")
+print(model_counts)
+print(model_percentages)
+print(f"Classification models account for {model_percentages['classifier']}% of all models")
+print(f"Regression models account for {model_percentages['regressor']}% of all models")
 
 df_models = df_statistical_learning_models[["apa_citation",'model', "year", "model_id"]]
 
@@ -1899,9 +1912,13 @@ regressor_mapping = {
     'lstm': 'Recurrent Neural Network'
 }
 
+# Apply mappings to create model_grouped columns
+df_algoritmos_class['model_grouped'] = df_algoritmos_class['model'].map(class_mapping)
 df_algoritmos_regre['model_grouped'] = df_algoritmos_regre['model'].map(regressor_mapping)
-sns.countplot(y='model_grouped', data=df_algoritmos_regre, order=df_algoritmos_regre['model_grouped'].value_counts().index)
 
+# Display regression algorithms count
+sns.countplot(y='model_grouped', data=df_algoritmos_regre, order=df_algoritmos_regre['model_grouped'].value_counts().index)
+plt.show()
 
 # Set Seaborn style and context
 sns.set_context("talk")
@@ -1973,6 +1990,16 @@ models["year"] = models["year"].astype(int)
 
 models_crosstab = pd.crosstab(index=models['year'], columns=models['affective_model'],normalize='index')
 
+# Analyze the chronological evolution of affective models
+early_years = models[models['year'] <= 2015]
+early_years_counts = early_years['affective_model'].value_counts(normalize=True).mul(100).round(1)
+print("\nAffective model distribution in early years (up to 2015):")
+print(early_years_counts)
+
+later_years = models[models['year'] > 2015]
+later_years_counts = later_years['affective_model'].value_counts(normalize=True).mul(100).round(1)
+print("\nAffective model distribution in later years (after 2015):")
+print(later_years_counts)
 
 n_models = df_models.groupby(
         ["paper_id",'model']
