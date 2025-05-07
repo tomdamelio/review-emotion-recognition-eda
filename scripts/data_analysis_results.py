@@ -312,7 +312,7 @@ db_access_by_year = pd.pivot_table(
 db_access_by_year_pct = db_access_by_year.div(db_access_by_year.sum(axis=1), axis=0) * 100
 
 # 3. Analysis of Open Databases
-print("\nAnalysis of Open Databases:")
+#print("\nAnalysis of Open Databases:")
 # Filter for papers with open databases
 open_db_papers = df_databases[df_databases['db_access'] == 'open']
 
@@ -386,6 +386,40 @@ summary_df = pd.DataFrame(summary_data)
 summary_df['Percentage'] = summary_df['Count'] / summary_df['Count'].iloc[0] * 100
 print("\nSummary Table:")
 print(summary_df.to_string(index=False))
+
+# Análisis adicional para sustentar claims sobre bases de datos
+print("\nAnálisis para sustentar claims sobre bases de datos:")
+
+# Tendencia temporal de uso de bases de datos
+db_usage_by_year = df_databases[df_databases['is_database'] == 'x'].groupby('year').size()
+print(f"\nTendencia de uso de bases de datos por año:")
+print(db_usage_by_year)
+
+# Proporción de bases de datos abiertas vs. restringidas
+total_dbs = len(df_databases[df_databases['is_database'] == 'x'])
+open_dbs = len(df_databases[df_databases['db_access'] == 'open'])
+restricted_dbs = len(df_databases[df_databases['db_access'] == 'restricted'])
+print(f"\nProporción de bases de datos:")
+print(f"Abiertas: {open_dbs} ({open_dbs/total_dbs*100:.2f}%)")
+print(f"Restringidas: {restricted_dbs} ({restricted_dbs/total_dbs*100:.2f}%)")
+
+# Análisis de citaciones para las bases de datos más populares
+top_dbs = ['deap', 'amigos', 'mahnob']
+for db in top_dbs:
+    papers_using_db = df_databases[df_databases[db] == 'x']['paper_id'].unique()
+    print(f"\nPapers que utilizan {db.upper()}: {len(papers_using_db)}")
+    if len(papers_using_db) > 0:
+        years_using_db = df_databases[df_databases[db] == 'x']['year'].value_counts().sort_index()
+        print(f"Uso por año de {db.upper()}:")
+        print(years_using_db)
+
+# Análisis de disponibilidad de datos para reproducibilidad
+print("\nDisponibilidad de datos para reproducibilidad:")
+reproducible_dbs = len(df_databases[(df_databases['db_access'] == 'open') & 
+                                   ((df_databases['db_public'] == 'x') | 
+                                    (df_databases['db_private_and_public'] == 'x') |
+                                    (df_databases['db_uppon_request'] == 'x'))])
+print(f"Bases de datos reproducibles: {reproducible_dbs} ({reproducible_dbs/total_dbs*100:.2f}%)")
 
 #%%
 # Figure: Database Access Over Time and Database Usage Frequency
@@ -520,15 +554,48 @@ papers_without_n = df_participants[~df_participants['paper_id'].isin(papers_with
 participants_n = df_participants[df_participants['n'] != '-']
 participants_n['n'] = participants_n['n'].astype(int)
 
-# Mean, min, max sample size (across all models)
+# Mean, median, min, max sample size (across all models)
 mean_n = participants_n['n'].mean()
+median_n = participants_n['n'].median()
 min_n = participants_n['n'].min()
 max_n = participants_n['n'].max()
 
 print(f"Number of papers reporting sample size: {len(papers_with_n)}")
 print(f"Number of papers NOT reporting sample size: {len(papers_without_n)}")
 print(f"Mean sample size: {mean_n:.1f}")
+print(f"Median sample size: {median_n:.1f}")
 print(f"Sample size range: {min_n} - {max_n}")
+
+# Plot age distribution
+sns.histplot(participants_n['n'], bins=20, kde=True)
+plt.show()
+
+#%%
+# --- Gender reporting analysis ---
+# Papers reporting female participants (if ANY model reports it)
+papers_with_female = df_participants[df_participants['n_female'] != '-']['paper_id'].unique()
+papers_without_female = df_participants[~df_participants['paper_id'].isin(papers_with_female)]['paper_id'].unique()
+
+total_papers = len(df_participants['paper_id'].unique())
+percent_without_female = (len(papers_without_female) / total_papers) * 100
+
+print(f"Number of papers NOT reporting number of female participants: {len(papers_without_female)} ({percent_without_female:.1f}%)")
+print(f"Number of papers reporting number of female participants: {len(papers_with_female)}")
+
+# Percentage of women in the sample (across all models)
+female_data = df_participants[(df_participants['n_female'] != '-') & (df_participants['n'] != '-')]
+if not female_data.empty:
+    female_data['n_female'] = female_data['n_female'].astype(int)
+    female_data['n'] = female_data['n'].astype(int)
+    female_data['female_percent'] = female_data['n_female'] / female_data['n'] * 100
+    mean_female_percent = female_data['female_percent'].mean()
+    min_female = female_data['n_female'].min()
+    max_female = female_data['n_female'].max()
+    print(f"Average percentage of women in the sample (across all models): {mean_female_percent:.1f}%")
+    print(f"Range of female participants: {min_female} - {max_female}")
+else:
+    print("No valid sample size and n_female data to calculate percentage of women.")
+
 
 # --- Age reporting analysis ---
 # Papers reporting mean age (if ANY model reports it)
@@ -541,8 +608,11 @@ papers_without_range_age = df_participants[~df_participants['paper_id'].isin(pap
 
 # Papers reporting any age info
 papers_reporting_age = set(papers_with_mean_age).union(set(papers_with_range_age))
+papers_not_reporting_age = total_papers - len(papers_reporting_age)
+percent_not_reporting_age = (papers_not_reporting_age / total_papers) * 100
+
 print(f"Number of papers reporting any age info: {len(papers_reporting_age)}")
-print(f"Number of papers NOT reporting any age info: {len(df_participants['paper_id'].unique()) - len(papers_reporting_age)}")
+print(f"Number of papers NOT reporting any age info: {papers_not_reporting_age} ({percent_not_reporting_age:.1f}%)")
 
 # Mean of reported mean ages (across all models)
 mean_age_data = df_participants[df_participants['mean_age'] != '-']
@@ -615,31 +685,15 @@ if not range_age_data.empty:
 else:
     print("No age ranges reported.")
 
-# --- Gender reporting analysis ---
-# Papers reporting female participants (if ANY model reports it)
-papers_with_female = df_participants[df_participants['n_female'] != '-']['paper_id'].unique()
-papers_without_female = df_participants[~df_participants['paper_id'].isin(papers_with_female)]['paper_id'].unique()
-
-print(f"Number of papers NOT reporting number of female participants: {len(papers_without_female)}")
-print(f"Number of papers reporting number of female participants: {len(papers_with_female)}")
-
-# Percentage of women in the sample (across all models)
-female_data = df_participants[(df_participants['n_female'] != '-') & (df_participants['n'] != '-')]
-if not female_data.empty:
-    female_data['n_female'] = female_data['n_female'].astype(int)
-    female_data['n'] = female_data['n'].astype(int)
-    female_data['female_percent'] = female_data['n_female'] / female_data['n'] * 100
-    mean_female_percent = female_data['female_percent'].mean()
-    print(f"Average percentage of women in the sample (across all models): {mean_female_percent:.1f}%")
-else:
-    print("No valid sample size and n_female data to calculate percentage of women.")
 
 # --- Country of origin reporting ---
 # Papers reporting country (if ANY model reports it)
 papers_with_country = df_participants[df_participants['country'] != '-']['paper_id'].unique()
 papers_without_country = df_participants[~df_participants['paper_id'].isin(papers_with_country)]['paper_id'].unique()
 
-print(f"Number of papers reporting country of origin: {len(papers_with_country)}")
+percent_with_country = (len(papers_with_country) / total_papers) * 100
+
+print(f"Number of papers reporting country of origin: {len(papers_with_country)} ({percent_with_country:.1f}%)")
 print(f"Number of papers NOT reporting country of origin: {len(papers_without_country)}")
 
 # Count of reported countries (across all models)
@@ -649,6 +703,8 @@ print("\nReported country counts:")
 print(country_counts)
 
 #%%
+# SELF REPORT
+
 # Helper functions for network visualization
 def nudge(pos, x_shift, y_shift):
     return {n:(x + x_shift, y + y_shift) for n,(x,y) in pos.items()}
@@ -662,6 +718,68 @@ print("\nSelf-report Analysis:")
 # Load self-report data
 df_self_report = pd.read_excel(r'.\data\cleaned\Normalized Table - Self-report.xlsx')
 df_self_report = df_self_report.fillna('-')
+
+# Analysis of questionnaire usage
+print("\nQuestionnaire Usage Analysis:")
+# Clean and standardize questionnaire usage data
+df_self_report['use_questionnaire'] = df_self_report['use_questionnaire'].str.replace('x', "Yes")
+df_self_report['use_questionnaire'] = df_self_report['use_questionnaire'].str.replace('-', "No")
+df_self_report['use_questionnaire'] = df_self_report['use_questionnaire'].str.replace("Relies on  other's questionnaire", "Relies on other's questionnaire")
+df_self_report['use_questionnaire'] = df_self_report['use_questionnaire'].str.replace("Relies on other´s questionaire", "Relies on other's questionnaire")
+
+# Get unique questionnaire usage per paper
+used_questionnaires = df_self_report.groupby(['paper_id', "use_questionnaire"]).nth(0)
+used_questionnaires.reset_index(inplace=True)
+
+# Calculate absolute and percentage counts
+questionnaire_counts = used_questionnaires["use_questionnaire"].value_counts()
+questionnaire_percentages = used_questionnaires["use_questionnaire"].value_counts(normalize=True).mul(100).round(1)
+
+print("\nQuestionnaire Usage Distribution:")
+for usage, count in questionnaire_counts.items():
+    percentage = questionnaire_percentages[usage]
+    print(f"{usage}: {count} ({percentage}%)")
+
+# Standardized Questionnaire Analysis
+print("\nStandardized Questionnaire Analysis:")
+# Get unique questionnaire usage per paper
+questionnaires = df_self_report.groupby(['paper_id', 'affective_questionnaire_SAM', 'affective_questionnaire_PSS', 
+                                       'affective_questionnaire_PANAS', 'affective_questionnaire_DES', 
+                                       'affective_questionnaire_affective_grid']).nth(0)
+questionnaires.reset_index(inplace=True)
+
+# Melt the questionnaire columns
+questionnaire_columns = ['affective_questionnaire_SAM', 'affective_questionnaire_PSS', 
+                        'affective_questionnaire_PANAS', 'affective_questionnaire_DES', 
+                        'affective_questionnaire_affective_grid']
+questionnaires_melted = pd.melt(questionnaires, 
+                               id_vars=['paper_id'], 
+                               value_vars=questionnaire_columns,
+                               var_name='Questionnaire',
+                               value_name='Used')
+
+# Clean questionnaire names
+questionnaires_melted['Questionnaire'] = questionnaires_melted['Questionnaire'].str.replace('affective_questionnaire_', '')
+
+# Calculate usage statistics
+questionnaire_usage = questionnaires_melted[questionnaires_melted['Used'] == 'x']['Questionnaire'].value_counts()
+questionnaire_usage_pct = questionnaires_melted[questionnaires_melted['Used'] == 'x']['Questionnaire'].value_counts(normalize=True).mul(100).round(1)
+
+print("\nStandardized Questionnaire Usage:")
+for questionnaire, count in questionnaire_usage.items():
+    percentage = questionnaire_usage_pct[questionnaire]
+    print(f"{questionnaire}: {count} ({percentage}%)")
+
+# Calculate percentage of papers using SAM among those that specified questionnaires
+papers_with_questionnaires = used_questionnaires[used_questionnaires["use_questionnaire"] == "Yes"]["paper_id"].unique()
+sam_papers = questionnaires[questionnaires['affective_questionnaire_SAM'] == 'x']["paper_id"].unique()
+panas_papers = questionnaires[questionnaires['affective_questionnaire_PANAS'] == 'x']["paper_id"].unique()
+
+sam_percentage = (len(sam_papers) / len(papers_with_questionnaires)) * 100
+panas_percentage = (len(panas_papers) / len(papers_with_questionnaires)) * 100
+
+print(f"\nPercentage of papers using SAM among those specifying questionnaires: {sam_percentage:.1f}%")
+print(f"Percentage of papers using PANAS among those specifying questionnaires: {panas_percentage:.1f}%")
 
 # Analysis of emotional categories
 emotional_categories = [
@@ -759,7 +877,7 @@ values = categories_count.tolist()
 colors = plt.cm.tab10(np.linspace(0, 1, len(categories)))
 ax1.bar(categories, values, color=colors)
 ax1.set_title('Categories', fontweight='bold')
-ax1.set_ylabel('Number of studies')
+ax1.set_ylabel('Number of models')
 # Reduce font size and rotate for better legibility
 ax1.set_xticklabels(categories, rotation=60, ha='right', fontsize=10)
 ax1.text(-0.1, 1.1, 'A', transform=ax1.transAxes, fontsize=36, fontweight='bold')
@@ -773,7 +891,7 @@ values2 = dimensions_count.tolist()
 colors_b = plt.cm.tab10(np.linspace(0, 1, len(dimensions)))
 ax2.bar(dimensions, values2, color=colors_b)
 ax2.set_title('Dimensions', fontweight='bold')
-ax2.set_ylabel('Number of studies')
+ax2.set_ylabel('Number of models')
 ax2.set_xticklabels(dimensions, rotation=45, ha='right', fontsize=12)
 ax2.text(-0.1, 1.1, 'B', transform=ax2.transAxes, fontsize=36, fontweight='bold')
 
@@ -853,13 +971,18 @@ sns.despine(ax=ax4)
 # Print statistics for the report
 print("\nEmotional Categories Analysis:")
 print(f"Total number of unique categories used: {len(categories_count)}")
-print("\nTop 5 most used categories:")
-print(categories_count.head())
+print("\nTop 6 most used categories:")
+print(categories_count.head(6))
 
 print("\nEmotional Dimensions Analysis:")
 print(f"Total number of unique dimensions used: {len(dimensions_count)}")
 print("\nTop 5 most used dimensions:")
-print(dimensions_count.head())
+print(dimensions_count.head(5))
+
+# Identify the most common categories for the paper
+#top_categories = categories_count.head(6).index.tolist()
+#print("\nMost common emotional categories:")
+#print(", ".join([f"'{cat.capitalize()}'" for cat in top_categories]))
 
 # Tight layout and show
 plt.tight_layout()
@@ -925,6 +1048,17 @@ print("\nStandardized Questionnaire Usage:")
 for questionnaire, count in questionnaire_usage.items():
     percentage = questionnaire_usage_pct[questionnaire]
     print(f"{questionnaire}: {count} ({percentage}%)")
+
+# Calculate percentage of papers using SAM among those that specified questionnaires
+papers_with_questionnaires = used_questionnaires[used_questionnaires["use_questionnaire"] == "Yes"]["paper_id"].unique()
+sam_papers = questionnaires[questionnaires['affective_questionnaire_SAM'] == 'x']["paper_id"].unique()
+panas_papers = questionnaires[questionnaires['affective_questionnaire_PANAS'] == 'x']["paper_id"].unique()
+
+sam_percentage = (len(sam_papers) / len(papers_with_questionnaires)) * 100
+panas_percentage = (len(panas_papers) / len(papers_with_questionnaires)) * 100
+
+print(f"\nPercentage of papers using SAM among those specifying questionnaires: {sam_percentage:.1f}%")
+print(f"Percentage of papers using PANAS among those specifying questionnaires: {panas_percentage:.1f}%")
 
 # 3. Emotional Categories Analysis
 print("\nEmotional Categories Analysis:")
@@ -1020,7 +1154,7 @@ print(f"Papers using both categories and dimensions: {len(papers_with_both)} ({l
 print(f"Papers using only categories: {len(papers_with_only_categories)} ({len(papers_with_only_categories)/total_papers*100:.1f}%)")
 print(f"Papers using only dimensions: {len(papers_with_only_dimensions)} ({len(papers_with_only_dimensions)/total_papers*100:.1f}%)")
 
-#%%
+
 # Emotion Elicitation Techniques Analysis
 print("\nEmotion Elicitation Techniques Analysis:")
 
@@ -1035,7 +1169,9 @@ print("\nStandardized Techniques Analysis:")
 standardized_techniques = {
     'IAPS': ['IAPS', 'IAPS-guided autobiographical conversation'],
     'TSST': ['TSST', 'Trier social stress test', 'Trier Social Stress Test (TSST)', 'Modified Trier Social Stress Test (TSST)'],
+    'SCWT': ['Stroop color-word interference test', 'SCWT'],
     'Rapid-ABC': ['Rapid-ABC play protocol'],
+    'IADS': ['International Affective Digitized Sound', 'IADS'],
     'Robin': ['Robin'],
     'AMT': ['Modified Autobiographical Memory Test']
 }
@@ -1048,6 +1184,7 @@ df_techniques_no_dup.reset_index(inplace=True)
 # Initialize counters
 technique_counts = {tech: 0 for tech in standardized_techniques.keys()}
 total_standardized = 0
+total_papers = len(df_techniques_no_dup['paper_id'].unique())
 
 # Count occurrences of each standardized technique
 for paper_id, row in df_techniques_no_dup.iterrows():
@@ -1062,7 +1199,6 @@ for paper_id, row in df_techniques_no_dup.iterrows():
                 break
 
 # Calculate percentages
-total_papers = len(df_techniques_no_dup['paper_id'].unique())
 technique_percentages = {tech: (count/total_papers)*100 for tech, count in technique_counts.items()}
 total_percentage = (total_standardized/total_papers)*100
 
@@ -1219,53 +1355,7 @@ techniques_per_paper = df_all_techniques.groupby('paper_id').size()
 print(f"Average techniques per paper: {techniques_per_paper.mean():.2f}")
 print(f"Range of techniques per paper: {techniques_per_paper.min()} - {techniques_per_paper.max()}")
 
-# 8. Create visualizations
-print("\nCreating visualizations...")
 
-# Create a figure with subplots
-fig, axes = plt.subplots(2, 2, figsize=(15, 12))
-fig.suptitle('Emotion Elicitation Techniques Analysis', fontsize=16)
-
-# Plot 1: Modality Distribution
-modality_df = pd.DataFrame({
-    'Modality': modality_counts.index,
-    'Count': modality_counts.values
-})
-sns.barplot(data=modality_df, x='Count', y='Modality', ax=axes[0,0])
-axes[0,0].set_title('Modality Distribution')
-axes[0,0].set_xlabel('Number of Studies')
-
-# Plot 2: Visual Modality Distribution
-visual_df = pd.DataFrame({
-    'Visual Type': visual_counts.index,
-    'Count': visual_counts.values
-})
-sns.barplot(data=visual_df, x='Count', y='Visual Type', ax=axes[0,1])
-axes[0,1].set_title('Visual Modality Distribution')
-axes[0,1].set_xlabel('Number of Studies')
-
-# Plot 3: Task Type Distribution
-task_df = pd.DataFrame({
-    'Task Type': task_counts.index,
-    'Count': task_counts.values
-})
-sns.barplot(data=task_df, x='Count', y='Task Type', ax=axes[1,0])
-axes[1,0].set_title('Task Type Distribution')
-axes[1,0].set_xlabel('Number of Studies')
-
-# Plot 4: All Techniques Distribution
-all_tech_df = pd.DataFrame({
-    'Technique': technique_counts.index,
-    'Count': technique_counts.values
-})
-sns.barplot(data=all_tech_df, x='Count', y='Technique', ax=axes[1,1])
-axes[1,1].set_title('All Techniques Distribution')
-axes[1,1].set_xlabel('Number of Studies')
-
-plt.tight_layout()
-plt.show()
-
-#%%
 #%%
 # Electrodermal Activity (EDA) Analysis
 print("\nElectrodermal Activity (EDA) Analysis:")
@@ -1282,18 +1372,32 @@ eda_devices = df_eda[~((df_eda['eda_device_specification'] == '-') &
 # Count papers with no device specified (but some are homemade)
 aver = df_eda.groupby(['paper_id', 'eda_device_specification']).nth(0)
 aver.reset_index(inplace= True)
-len(aver[aver['eda_device_specification'] == '-'])
+no_device_specified = len(aver[aver['eda_device_specification'] == '-'])
+print(f"Papers with no device specified: {no_device_specified}")
+
+# Calculate total number of unique papers
+total_eda_papers = len(df_eda['paper_id'].unique())
 
 # Percentage of papers with no device specified and not homemade
-((len(df_eda)-len(eda_devices)) / len(df_eda)) * 100
+no_device_percentage = (no_device_specified / total_eda_papers) * 100
+print(f"Percentage of papers with no device specified: {no_device_percentage:.1f}%")
 
 # Group by paper_id and get first occurrence of each device
 eda_devices = eda_devices.groupby(['paper_id', 'eda_device_specification']).nth(0)
 eda_devices.reset_index(inplace=True)
 
 # Count papers with homemade devices
-eda_devices['eda_device_is_homemade'].value_counts()
-eda_devices['eda_device_is_homemade'].value_counts(normalize=True).mul(100).round(1).astype(str) + '%'
+homemade_counts = eda_devices['eda_device_is_homemade'].value_counts()
+print("\nHomemade device counts:")
+print(homemade_counts)
+
+homemade_percentages = eda_devices['eda_device_is_homemade'].value_counts(normalize=True).mul(100).round(1)
+print("\nHomemade device percentages:")
+print(homemade_percentages.astype(str) + '%')
+
+# Calculate percentage of homemade devices
+homemade_percentage = homemade_percentages.get('x', 0)
+print(f"\nPercentage of studies employing custom-made devices: {homemade_percentage}%")
 
 # Map EDA devices to standardized names
 mapping_eda = {
@@ -1302,7 +1406,7 @@ mapping_eda = {
     'BIOPAC MP150 with EDA100C module': 'BIOPAC',
     'BIOPAC MP160': 'BIOPAC', 'BIOPAC MP35': 'BIOPAC',
     'BIOPAC MP36': 'BIOPAC', 'BIOPAC-MP150': 'BIOPAC',
-    "BIOPAC’s MP150": 'BIOPAC', 'Biopac': 'BIOPAC',
+    "BIOPAC's MP150": 'BIOPAC', 'Biopac': 'BIOPAC',
     'Biopac\nMP36': 'BIOPAC', 'Biopac MP 150 system': 'BIOPAC',
     'Biopac MP150': 'BIOPAC', 'MP150': 'BIOPAC',
     'MP150 BIOPAC': 'BIOPAC', 'MP150 BIOPAC system': 'BIOPAC',
@@ -1398,6 +1502,7 @@ mapping_eda = {
     'e-Health Sensor\nPlatform V2.0': 'e-Health Sensor Platform V2.0',
     'imec': 'imec',
 }
+#%%
 
 # Replace device specifications with standardized names
 eda_devices['eda_device_specification'] = (
@@ -1405,11 +1510,27 @@ eda_devices['eda_device_specification'] = (
 )
 
 # Count unique devices
-eda_devices['eda_device_specification'].value_counts()
-eda_devices['eda_device_specification'].value_counts(normalize=True).mul(100).round(1).astype(str) + '%'
+device_counts = eda_devices['eda_device_specification'].value_counts()
+print("\nDevice counts:")
+print(device_counts)
+
+device_percentages = eda_devices['eda_device_specification'].value_counts(normalize=True).mul(100).round(1)
+print("\nDevice percentages:")
+print(device_percentages.astype(str) + '%')
+
+# Get the top 3 most used devices
+top_devices = device_counts.head(3).index.tolist()
+print(f"\nTop 3 most used devices: {', '.join(top_devices)}")
 
 n_dispositivos_eda = eda_devices['eda_device_specification'].nunique()
-print (f'Se utilizaron {n_dispositivos_eda} dispositivos de EDA diferentes')
+print(f'Total distinct EDA devices used: {n_dispositivos_eda}')
+
+# Calculate the percentage of studies that did not report the specific device
+print(f"\nOn the other hand, {no_device_percentage:.1f}% of the studies did not report the specific device used or clarified whether it was a homemade solution.")
+
+# Print total number of papers with EDA data for reference
+print(f"\nTotal number of papers with EDA data: {total_eda_papers}")
+
 
 
 # Plot EDA devices
@@ -1471,52 +1592,107 @@ sns.despine()
 
 plt.show()
 
-
+#%%
 # 2. EDA Location Analysis
+print("\nEDA Location Analysis:")
 df_eda['location_hemibody'] = df_eda['location_hemibody'].replace({'non-dominant': 'not dominant'})
 
 hemibody = df_eda.groupby(['paper_id', 'location_hemibody']).nth(0)
 hemibody.reset_index(inplace=True)
 
-# Count papers with no hemibody specified
-hemibody['location_hemibody'].value_counts()
-hemibody['location_hemibody'].value_counts(normalize=True).mul(100).round(1).astype(str) + '%'
+# Count papers with hemibody specified
+hemibody_counts = hemibody['location_hemibody'].value_counts()
+print("\nHemibody counts:")
+print(hemibody_counts)
 
-# Frequency of hemibody placements
-hemibody_only_reported = hemibody[hemibody['location_hemibody'] != "-"]
-hemibody_only_reported['location_hemibody'].value_counts(normalize=True).mul(100).round(1).astype(str) + '%'
+hemibody_percentages = hemibody['location_hemibody'].value_counts(normalize=True).mul(100).round(1)
+print("\nHemibody percentages:")
+print(hemibody_percentages.astype(str) + '%')
 
+# Calculate percentage of papers reporting hemibody
+hemibody_reported = hemibody[hemibody['location_hemibody'] != "-"]
+hemibody_reported_percentage = (len(hemibody_reported) / len(hemibody)) * 100
+print(f"\nPercentage of studies reporting hemibody placement: {hemibody_reported_percentage:.1f}%")
 
+# Frequency of hemibody placements when reported
+hemibody_reported_counts = hemibody_reported['location_hemibody'].value_counts()
+print("\nHemibody placement when reported:")
+print(hemibody_reported_counts)
+
+hemibody_reported_percentages = hemibody_reported['location_hemibody'].value_counts(normalize=True).mul(100).round(1)
+print("\nHemibody placement percentages when reported:")
+print(hemibody_reported_percentages.astype(str) + '%')
+
+# Calculate percentage of left side placement when reported
+left_side_percentage = hemibody_reported_percentages.get('left', 0)
+print(f"Percentage of left side placement when reported: {left_side_percentage}%")
+
+# Analyze sensor locations
+print("\nSensor Location Analysis:")
 sensors = df_eda.groupby(['paper_id','is_hands','wrist', 'chest',
                     'finger_thumb', 'finger_index', 'finger_middle', 'finger_ring', 'finger_little',
                      'phalange_proximal', 'phalange_medial','phalange_distal',
                      ]).nth(0)
-sensors.reset_index(inplace= True)
+sensors.reset_index(inplace=True)
 
 sensors_location = df_eda.groupby(['paper_id','is_hands','wrist', 'chest']).nth(0)
-sensors_location.reset_index(inplace = True)
+sensors_location.reset_index(inplace=True)
 
 # Percentage of papers with no sensor location specified
-(len(sensors[(sensors['is_hands'] == '-') &
+no_location_percentage = (len(sensors[(sensors['is_hands'] == '-') &
             (sensors['wrist'] == '-') &
             (sensors['chest'] == '-')]) / len(sensors)) * 100
+print(f"\nPercentage of papers with no body part specified: {no_location_percentage:.1f}%")
+
+# Calculate percentage of papers reporting body part
+body_part_reported_percentage = 100 - no_location_percentage
+print(f"Percentage of studies reporting body part placement: {body_part_reported_percentage:.1f}%")
 
 # Frequency of sensor locations
 general_place = fn.multi_reversing(sensors, 'model_id',sensors[['is_hands','wrist', 'chest']])
-general_place['variable'].value_counts()
-general_place['variable'].value_counts(normalize=True).mul(100).round(1).astype(str) + '%'
+general_place_counts = general_place['variable'].value_counts()
+print("\nBody part placement counts:")
+print(general_place_counts)
+
+general_place_percentages = general_place['variable'].value_counts(normalize=True).mul(100).round(1)
+print("\nBody part placement percentages:")
+print(general_place_percentages.astype(str) + '%')
+
+# Calculate percentage of hand placement
+hand_percentage = general_place_percentages.get('is_hands', 0)
+print(f"Percentage of hand placement when body part reported: {hand_percentage}%")
 
 # Frequency of finger sensors
 finger_sensor = fn.multi_reversing(sensors, 'model_id',sensors[['finger_thumb', 'finger_index', 'finger_middle', 'finger_ring', 'finger_little']])
-finger_sensor['variable'].value_counts()
-finger_sensor['variable'].value_counts(normalize=True).mul(100).round(1).astype(str) + '%'
+finger_sensor_counts = finger_sensor['variable'].value_counts()
+print("\nFinger placement counts:")
+print(finger_sensor_counts)
+
+finger_sensor_percentages = finger_sensor['variable'].value_counts(normalize=True).mul(100).round(1)
+print("\nFinger placement percentages:")
+print(finger_sensor_percentages.astype(str) + '%')
+
+# Calculate percentage of middle and index finger placement
+middle_finger_percentage = finger_sensor_percentages.get('finger_middle', 0)
+index_finger_percentage = finger_sensor_percentages.get('finger_index', 0)
+print(f"Percentage of middle finger placement: {middle_finger_percentage}%")
+print(f"Percentage of index finger placement: {index_finger_percentage}%")
 
 # Frequency of phalange sensors
 location_phalanges = fn.multi_reversing(sensors, 'model_id',sensors[['phalange_proximal', 'phalange_medial','phalange_distal']])
-location_phalanges['variable'].value_counts()
-location_phalanges['variable'].value_counts(normalize=True).mul(100).round(1).astype(str) + '%'
+location_phalanges_counts = location_phalanges['variable'].value_counts()
+print("\nPhalange placement counts:")
+print(location_phalanges_counts)
 
+location_phalanges_percentages = location_phalanges['variable'].value_counts(normalize=True).mul(100).round(1)
+print("\nPhalange placement percentages:")
+print(location_phalanges_percentages.astype(str) + '%')
 
+# Calculate total number of papers with EDA data
+total_eda_papers = len(df_eda['paper_id'].unique())
+print(f"\nTotal number of papers with EDA data: {total_eda_papers}")
+
+#%%
 # Rename finger sensors for plotting
 finger_sensor['variable'] = finger_sensor['variable'].str.replace('finger_middle','Middle')
 finger_sensor['variable'] = finger_sensor['variable'].str.replace('finger_index','Index')
