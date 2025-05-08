@@ -2381,3 +2381,39 @@ rlm_res.summary()
 # Para eso, voy a tener que hacer un join para entender que modelo es el que se esta usando en cada estudio
 # Eso me daria e panel C del plot que inicio Jero
 # Luego de eso, tendria que integrar el plot pasado (panel A y B, que hizo Jero) con este panel C.
+
+#%% Tabla 2
+
+modelos_metaanalisis = pd.read_excel(r'.\data\processed\final_melted_df_excel_paired_ALL.xlsx')
+tabla_2 = pd.DataFrame()
+
+list_databases = ['MAHNOB', 'MAHNOB', 'MAHNOB', 'DEAP', 'DEAP', 'DEAP', 'DEAP', 'DEAP', 'DEAP',
+ 'DEAP', 'DEAP', 'DEAP', 'DEAP', 'DEAP', 'DEAP', 'DEAP', 'DEAP', 'DEAP', 'DEAP',
+ 'DEAP', 'DEAP', 'AMIGOS', 'AMIGOS', 'DEAP', 'DEAP', 'DEAP', 'DEAP', 'DEAP',
+ 'DEAP', 'DEAP', 'DEAP', 'DEAP', 'DEAP', 'DEAP', 'DEAP', 'DEAP', 'DEAP', 'DEAP',
+ 'DEAP', 'DEAP', 'DEAP', 'DEAP', 'DEAP', 'DEAP', 'DEAP', 'DEAP', 'DEAP', 'DEAP',
+ 'DEAP', 'AMIGOS', 'AMIGOS', 'AMIGOS', 'AMIGOS', 'AMIGOS', 'AMIGOS', 'AMIGOS',
+ 'AMIGOS', 'AMIGOS', 'AMIGOS', 'AMIGOS', 'DEAP', 'PMEmo', 'PMEmo', 'PMEmo',
+ 'PMEmo', 'PMEmo', 'PMEmo', 'DEAP', 'DEAP', 'DEAP', 'DEAP', 'DEAP', 'DEAP',
+ 'DEAP', 'DEAP', 'AMIGOS', 'AMIGOS', 'AMIGOS', 'AMIGOS', 'K-EmoCon', 'K-EmoCon',
+ 'K-EmoCon', 'K-EmoCon', 'ASCERTAIN', 'ASCERTAIN', 'ASCERTAIN', 'DEAP',
+ 'AMIGOS', 'MAHNOB', 'DEAP and AMIGOS', 'DEAP, AMIGOS AND MAHNOB',
+ 'DEAP, AMIGOS (training) and MAHNOB (test)', 'DEAP (training) and MANHOB (test)',
+ 'Private', 'DEAP', 'DEAP', 'DEAP', 'AMIGOS', 'AMIGOS', 'Private', 'Private',
+ 'Private', 'Private', 'BM-SWU', 'BM-SWU', 'BM-SWU', 'BM-SWU', 'BM-SWU',
+ 'PAFEW', 'PAFEW', 'PAFEW', 'PAFEW', 'PAFEW', 'DEAP', 'DEAP', 'DEAP', 'DEAP',
+ 'DEAP', 'AMIGOS', 'AMIGOS', 'AMIGOS', 'AMIGOS', 'AMIGOS', 'VREED', 'VREED',
+ 'VREED', 'VREED', 'VREED', 'VREED', 'Private', 'DEAP', 'DEAP', 'DEAP', 'DEAP',
+ 'AMIGOS', 'ASCERTAIN', 'ASCERTAIN', 'ASCERTAIN', 'ASCERTAIN', 'ASCERTAIN',
+ 'VREED', 'DEAP', 'DEAP', 'DEAP', 'MAHNOB', 'CASE', 'CASE', 'CASE', 'CASE',
+ 'DEAP', 'MAHNOB', 'AMIGOS', 'AMIGOS', 'DEAP', 'DEAP']
+
+tabla_2["Citation"] = modelos_metaanalisis["apa_citation"]
+tabla_2["Year"] = modelos_metaanalisis["year"]
+tabla_2["Modelos Machine Learning"] = modelos_metaanalisis["ML-model"]
+tabla_2["Database"] = [list_databases]
+tabla_2["Arousal Accuracy (%)"] = modelos_metaanalisis["accuracy_arousal"]
+tabla_2["Valence Accuracy (%)"] = modelos_metaanalisis["accuracy_valence"]
+tabla_2["Mean Accuracy (%)"] =((tabla_2["Arousal Accuracy (%)"]+tabla_2["Valence Accuracy (%)"])/2).round(2)
+
+tabla_2.to_excel("data/processed/TABLE_2_incomplete.xlsx")
