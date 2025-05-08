@@ -1797,6 +1797,7 @@ print(model_percentages)
 print(f"Classification models account for {model_percentages['classifier']}% of all models")
 print(f"Regression models account for {model_percentages['regressor']}% of all models")
 
+#%%
 df_models = df_statistical_learning_models[["apa_citation",'model', "year", "model_id"]]
 
 # Plotting the number of papers per year and model
@@ -1916,10 +1917,12 @@ regressor_mapping = {
 df_algoritmos_class['model_grouped'] = df_algoritmos_class['model'].map(class_mapping)
 df_algoritmos_regre['model_grouped'] = df_algoritmos_regre['model'].map(regressor_mapping)
 
+#%%
 # Display regression algorithms count
 sns.countplot(y='model_grouped', data=df_algoritmos_regre, order=df_algoritmos_regre['model_grouped'].value_counts().index)
 plt.show()
 
+#%%
 # Set Seaborn style and context
 sns.set_context("talk")
 
@@ -1953,6 +1956,7 @@ plt.tight_layout()
 sns.despine()
 plt.show()
 
+#%%
 # Plotting frequency of all models
 df_all_models = df_statistical_learning_models.iloc[:,1:57]
 df_all_models.drop(df_all_models.columns[[1,2,3,4,5,6,39,40,41]], axis=1, inplace=True)
@@ -1965,6 +1969,7 @@ sns.countplot(x='variable', data=df_all_models, order = getattr(df_all_models, '
 plt.xticks(rotation=90)
 plt.show()
 
+#%%
 # Porcentaje de modelos de regresión
 df_algoritmos_regre['model'].value_counts(normalize=True).mul(100).round(2)
 
@@ -2010,6 +2015,8 @@ n_models["year"] = n_models["year"].astype(int)
 
 n_models_crosstab = pd.crosstab(index=n_models['year'], columns=n_models['model'],normalize='index')
 
+
+#%%
 # Plotting Figure 8: Chronological evolution of emotion model types and algorithm usage in emotion recognition research with EDA over a decade
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
@@ -2039,6 +2046,8 @@ ax1.set_ylabel("Percentage of articles (%)")
 ax1.legend(title='Affective model', loc='upper right', bbox_to_anchor=(1, 1.4),
           frameon=False, fancybox=True, ncol=2, fontsize=18)
 ax1.text(0.0, 1.1, 'A', transform=ax1.transAxes, fontsize=36, fontweight='bold')
+# Ensure y-axis goes from 0 to 100
+ax1.set_yticks(np.arange(0, 101, 20))
 sns.despine(ax=ax1)
 
 # SUBPLOT B
@@ -2057,11 +2066,108 @@ ax2.set_ylabel("Percentage of articles (%)")
 ax2.legend(title='Type of algorithm', loc='upper right', bbox_to_anchor=(1, 1.4),
           frameon=False, fancybox=True, ncol=2, fontsize=18)
 ax2.text(0.0, 1.1, 'B', transform=ax2.transAxes, fontsize=36, fontweight='bold')
+# Ensure y-axis goes from 0 to 100
+ax2.set_yticks(np.arange(0, 101, 20))
 sns.despine(ax=ax2)
 
 plt.tight_layout()
 plt.show()
 
+#%%
+# Plotting Figure 9: Absolute counts of emotion model types and algorithm usage by year
+# Create raw counts crosstabs (without normalization)
+models_crosstab_counts = pd.crosstab(index=models['year'], columns=models['affective_model'])
+n_models_crosstab_counts = pd.crosstab(index=n_models['year'], columns=n_models['model'])
+
+# Set the context for even bigger fonts
+sns.set_context("talk")
+
+# Create figure with custom GridSpec
+fig = plt.figure(figsize=(10, 10), dpi=300)
+gs = gridspec.GridSpec(2, 1)
+
+# SUBPLOT A - Absolute counts of affective models
+ax1 = plt.subplot(gs[0, 0])
+models_crosstab_counts.plot(kind='bar',  
+                           stacked=True,
+                           rot=0,
+                           ax=ax1,
+                           color=['#1f77b4', '#ff7f0e'])
+ax1.set_xticklabels(ax1.get_xticklabels())
+plt.xticks(rotation=45)
+ax1.set_yticklabels(ax1.get_yticklabels())
+ax1.set_xlabel("Year")
+ax1.set_ylabel("Number of articles")
+ax1.legend(title='Affective model', loc='upper right', bbox_to_anchor=(1, 1.4),
+          frameon=False, fancybox=True, ncol=2, fontsize=18)
+ax1.text(0.0, 1.1, 'A', transform=ax1.transAxes, fontsize=36, fontweight='bold')
+sns.despine(ax=ax1)
+
+# SUBPLOT B - Absolute counts of algorithm types
+ax2 = plt.subplot(gs[1, 0])
+n_models_crosstab_counts.plot(kind='bar',  
+                             stacked=True,
+                             rot=0,
+                             ax=ax2,
+                             color=['#1f77b4', '#ff7f0e'])
+ax2.set_xticklabels(ax2.get_xticklabels())
+plt.xticks(rotation=45)
+ax2.set_yticklabels(ax2.get_yticklabels())
+ax2.set_xlabel("Year")
+ax2.set_ylabel("Number of articles")
+ax2.legend(title='Type of algorithm', loc='upper right', bbox_to_anchor=(1, 1.4),
+          frameon=False, fancybox=True, ncol=2, fontsize=18)
+ax2.text(0.0, 1.1, 'B', transform=ax2.transAxes, fontsize=36, fontweight='bold')
+sns.despine(ax=ax2)
+
+plt.tight_layout()
+plt.show()
+
+# Calcular y mostrar el total de artículos en cada plot
+total_articles_plot_A = models_crosstab_counts.sum().sum()
+print(f"\nTotal de artículos en el Plot A (Affective models): {total_articles_plot_A}")
+
+total_articles_plot_B = n_models_crosstab_counts.sum().sum()
+print(f"Total de artículos en el Plot B (Algorithm types): {total_articles_plot_B}")
+
+# Análisis de la diferencia entre los totales
+print("\n--- Análisis de la diferencia entre totales ---")
+
+# Verificar cuántos papers únicos hay en cada dataframe
+unique_papers_models = models['paper_id'].nunique()
+unique_papers_n_models = n_models['paper_id'].nunique()
+print(f"Papers únicos en 'models' (Affective models): {unique_papers_models}")
+print(f"Papers únicos en 'n_models' (Algorithm types): {unique_papers_n_models}")
+
+# Identificar qué papers están en uno pero no en el otro
+papers_in_models = set(models['paper_id'].unique())
+papers_in_n_models = set(n_models['paper_id'].unique())
+
+papers_only_in_models = papers_in_models - papers_in_n_models
+papers_only_in_n_models = papers_in_n_models - papers_in_models
+
+print(f"\nPapers que solo aparecen en 'models' (no en 'n_models'): {len(papers_only_in_models)}")
+if len(papers_only_in_models) > 0:
+    print("Ejemplos de paper_id:", list(papers_only_in_models)[:5])
+
+print(f"\nPapers que solo aparecen en 'n_models' (no en 'models'): {len(papers_only_in_n_models)}")
+if len(papers_only_in_n_models) > 0:
+    print("Ejemplos de paper_id:", list(papers_only_in_n_models)[:5])
+
+# Verificar si hay duplicados en los conteos
+print("\nVerificando duplicados en los conteos:")
+duplicates_in_models = models[models.duplicated(subset=['paper_id'], keep=False)]
+print(f"Duplicados en 'models' por paper_id: {len(duplicates_in_models)}")
+
+duplicates_in_n_models = n_models[n_models.duplicated(subset=['paper_id'], keep=False)]
+print(f"Duplicados en 'n_models' por paper_id: {len(duplicates_in_n_models)}")
+
+# Verificar valores nulos o faltantes
+print("\nVerificando valores nulos o faltantes:")
+print(f"Valores nulos en 'models' para affective_model: {models['affective_model'].isna().sum()}")
+print(f"Valores nulos en 'n_models' para model: {n_models['model'].isna().sum()}")
+
+#%%
 # Percentage of model tpyes used in the studies
 n_models["model"].value_counts(normalize=True).mul(100).round(1).astype(str) + '%'
 
@@ -2102,4 +2208,176 @@ g.set(title=titulos[0], xlabel=titulos[1], ylabel=titulos[2])
 plt.xticks(rotation=90)
 plt.tight_layout()
 plt.show()
+
 # %%
+import statsmodels.api as sm
+from scipy.stats import permutation_test, ttest_1samp, bootstrap
+from statsmodels.regression.linear_model import OLS
+df = pd.read_excel('./data/processed/final_melted_df_excel_paired_ALL.xlsx')
+
+paper_id_to_citation = {
+    20: "Wiem & Lachiri, 2017",
+    23: "Ayata et al., 2017",
+    32: "Siddharth et al., 2018",
+    38: "Ayata et al., 2017",
+    63: "Sharma et al., 2019",
+    66: "Ganapathy et al., 2020",
+    74: "Chang et al., 2019",
+    82: "Santamaria-Granados et al., 2018",
+    86: "Ganapathy & Swaminathan, 2020",
+    91: "Susanto et al., 2020",
+    94: "Yin et al., 2019",
+    97: "Ganapathy & Swaminathan, 2019",
+    109: "Bota et al., 2023",
+    113: "Selvi & Vijayakumaran, 2023",
+    116: "Jung & Sejnowski, 2019",
+    117: "Saffaryazdi et al., 2024",
+    129: "Ganapathy et al., 2021",
+    131: "Pidgeon et al., 2022",
+    133: "Dessai & Virani, 2023",
+    135: "Gahlan & Sethia, 2024",
+    138: "Chen et al., 2022",
+    139: "Mu et al., 2024",
+    142: "Perry Fordson et al., 2022",
+    145: "Zhu et al., 2023",
+    150: "Yin et al., 2022",
+    154: "Joo et al., 2024",
+    156: "Raheel et al., 2021",
+    157: "Veeranki et al., 2024",
+    161: "Shukla et al., 2019",
+    162: "Chatterjee et al., 2022",
+    163: "Tabbaa et al., 2021",
+    166: "Gohumpu et al., 2023",
+    171: "Singh et al., 2023",
+    173: "Kumar & Fredo, 2025",
+    174: "Liu et al., 2023",
+    182: "Elalamy et al., 2021"
+}
+
+df['diff_acc'] = df['accuracy_arousal'] - df['accuracy_valence']
+
+df['mean_acc'] = np.mean([df['accuracy_arousal'], df['accuracy_valence']], axis=0)
+
+from scipy.stats import linregress
+import matplotlib.pyplot as plt
+import numpy as np
+
+# Sample data for demonstration (replace with your actual DataFrame)
+# import pandas as pd
+# df = pd.DataFrame({
+#     'paper_id': [...],
+#     'N': [...],
+#     'accuracy_arousal': [...],
+#     'accuracy_valence': [...]
+# })
+
+# Calculate the difference in accuracy
+df['diff_acc'] = df['accuracy_arousal'] - df['accuracy_valence']
+
+# Unique paper IDs
+unique_paper_ids = df['paper_id'].unique()
+
+# Create a color map for paper IDs
+colors = plt.cm.tab10(np.linspace(0, 1, len(unique_paper_ids)))
+
+plt.figure(figsize=(22, 9))  # Significantly increased width to accommodate the legend
+
+# Calculate the mean difference in accuracy
+mean_diff_acc = np.mean(df['diff_acc'])
+
+# Add a horizontal line to represent the mean difference in accuracy
+plt.axhline(mean_diff_acc, color='black', linestyle='-', linewidth=2)
+
+# Add text to indicate the mean value
+plt.text(max(df['accuracy_valence']) * 1, mean_diff_acc, f'Mean difference = {mean_diff_acc:.2f}', verticalalignment='bottom', horizontalalignment='right')
+
+# Calculate the correlation coefficient and p-value
+slope, intercept, r_value, p_value, std_err = linregress(df['accuracy_valence'], df['diff_acc'])
+
+for i, paper_id in enumerate(unique_paper_ids):
+    subset = df[df['paper_id'] == paper_id]
+    
+    # Check if N == 32 for the subset
+    is_N_32 = subset['N'] == 32
+    
+    # Get the citation for the paper ID
+    citation = paper_id_to_citation.get(paper_id, f"Paper ID {paper_id}")
+    
+    # Plot points with N == 32 using triangles
+    if any(is_N_32):
+        plt.scatter(subset['accuracy_valence'][is_N_32], subset['diff_acc'][is_N_32], 
+                    color=colors[i], marker='^', label=f"{citation}")
+    
+    # Plot other points using circles
+    if any(~is_N_32):
+        plt.scatter(subset['accuracy_valence'][~is_N_32], subset['diff_acc'][~is_N_32], 
+                    color=colors[i], label=citation)
+
+# Adding horizontal lines
+plt.axhline(np.mean(df['diff_acc']) + 1.96 * np.std(df['diff_acc']), linestyle='--')
+plt.axhline(np.mean(df['diff_acc']) - 1.96 * np.std(df['diff_acc']), linestyle='--')
+
+# Adding labels and title
+plt.xlabel('Accuracy of Valence Models')
+plt.ylabel('Difference in Accuracy (Arousal - Valence)')
+plt.title('Valence Accuracy vs Difference in Arousal and Valence Accuracy')
+
+# Adjust the layout to maintain the plot size
+plt.tight_layout(rect=[0, 0, 0.45, 1])  # Adjusted to leave about 1/3 of figure width for legends
+
+# Get handles and labels for the references
+handles, labels = plt.gca().get_legend_handles_labels()
+
+# Single legend for all references with increased font size for better readability
+legend1 = plt.legend(handles, labels, title='References', 
+                    bbox_to_anchor=(1.01, 1), loc='upper left', ncol=1, 
+                    fontsize=9, title_fontsize=10)
+plt.gca().add_artist(legend1)
+plt.setp(legend1.get_title(), weight='bold')
+
+# Legend for marker types
+legend3 = plt.legend([plt.Line2D([0], [0], marker='^', color='w', markerfacecolor='black', markersize=10),
+                      plt.Line2D([0], [0], marker='o', color='w', markerfacecolor='black', markersize=10)],
+                     ['DEAP Database                       ', 'Other Data'], 
+                     title='Database', 
+                     bbox_to_anchor=(1.01, 0.1), loc='upper left')
+plt.setp(legend3.get_title(), weight='bold')
+
+# Remove spines
+sns.despine()
+
+# Show the plot
+plt.show()
+#%%
+
+x = df['diff_acc']
+
+def my_stat(x):
+    return ttest_1samp(x, popmean=0).statistic
+
+#%%
+permutation_test((x.values,), my_stat, permutation_type='samples')
+
+#%%
+bootstrap((x.values,), my_stat)
+#%%
+X = df[['N', 'year', 'mean_acc']]
+X = sm.add_constant(X)
+
+y = df['diff_acc']
+
+model = OLS(y, X)
+res = model.fit()
+res.summary()
+
+#%%%
+rlm_mod = sm.RLM(y, X, M=sm.robust.norms.HuberT())
+rlm_res = rlm_mod.fit()
+rlm_res.summary()
+
+# %%
+# SEGUIR DESDE ACA ->
+# Con los datos del meta analisis hacer un boxplot de la diferencia de accuracy entre arousal y valence agrupado por modelo.
+# Para eso, voy a tener que hacer un join para entender que modelo es el que se esta usando en cada estudio
+# Eso me daria e panel C del plot que inicio Jero
+# Luego de eso, tendria que integrar el plot pasado (panel A y B, que hizo Jero) con este panel C.
