@@ -2385,7 +2385,7 @@ rlm_res.summary()
 #%% Tabla 2
 
 modelos_metaanalisis = pd.read_excel(r'.\data\processed\final_melted_df_excel_paired_ALL.xlsx')
-tabla_2 = pd.DataFrame()
+tabla_metaanalisis = pd.DataFrame()
 
 list_databases = ['MAHNOB', 'MAHNOB', 'MAHNOB', 'DEAP', 'DEAP', 'DEAP', 'DEAP', 'DEAP', 'DEAP',
  'DEAP', 'DEAP', 'DEAP', 'DEAP', 'DEAP', 'DEAP', 'DEAP', 'DEAP', 'DEAP', 'DEAP',
@@ -2408,12 +2408,17 @@ list_databases = ['MAHNOB', 'MAHNOB', 'MAHNOB', 'DEAP', 'DEAP', 'DEAP', 'DEAP', 
  'VREED', 'DEAP', 'DEAP', 'DEAP', 'MAHNOB', 'CASE', 'CASE', 'CASE', 'CASE',
  'DEAP', 'MAHNOB', 'AMIGOS', 'AMIGOS', 'DEAP', 'DEAP']
 
-tabla_2["Citation"] = modelos_metaanalisis["apa_citation"]
-tabla_2["Year"] = modelos_metaanalisis["year"]
-tabla_2["Modelos Machine Learning"] = modelos_metaanalisis["ML-model"]
-tabla_2["Database"] = [list_databases]
-tabla_2["Arousal Accuracy (%)"] = modelos_metaanalisis["accuracy_arousal"]
-tabla_2["Valence Accuracy (%)"] = modelos_metaanalisis["accuracy_valence"]
-tabla_2["Mean Accuracy (%)"] =((tabla_2["Arousal Accuracy (%)"]+tabla_2["Valence Accuracy (%)"])/2).round(2)
+tabla_metaanalisis["Citation"] = modelos_metaanalisis["apa_citation"]
+tabla_metaanalisis["Year"] = modelos_metaanalisis["year"]
+tabla_metaanalisis["Modelos Machine Learning"] = modelos_metaanalisis["ML_model"]
+tabla_metaanalisis["Database"] = list_databases
+tabla_metaanalisis["Arousal Accuracy (%)"] = modelos_metaanalisis["accuracy_arousal"]
+tabla_metaanalisis["Valence Accuracy (%)"] = modelos_metaanalisis["accuracy_valence"]
+tabla_metaanalisis["Mean Accuracy (%)"] =((tabla_metaanalisis["Arousal Accuracy (%)"]+tabla_metaanalisis["Valence Accuracy (%)"])/2).round(2)
 
-tabla_2.to_excel("data/processed/TABLE_2_incomplete.xlsx")
+tabla_metaanalisis.to_excel("data/processed/TABLE_2_incomplete.xlsx")
+
+tabla_2 = tabla_metaanalisis.loc[tabla_metaanalisis.groupby("Citation")["Mean Accuracy (%)"].idxmax()]
+
+tabla_2.to_excel("data/processed/TABLE_2_final.xlsx")
+# %%
