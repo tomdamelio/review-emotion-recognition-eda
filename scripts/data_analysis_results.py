@@ -41,7 +41,7 @@ print(f"New Directory: {new_directory}")
 
 #%% 
 # Cargar el dataset principal
-df_metadata = pd.read_excel(r'.\data\cleaned\Normalized Table - Metadata.xlsx')
+df_metadata = pd.read_excel(r'./data/cleaned/Normalized Table - Metadata.xlsx')
 
 # Limpieza inicial de datos
 df_metadata = df_metadata.fillna('-')
@@ -522,6 +522,7 @@ axes[1].set_xticklabels(custom_labels, rotation=90, fontsize=20)
 fig.tight_layout()
 sns.despine(ax=axes[0])
 sns.despine(ax=axes[1])
+plt.savefig(r'./figures/FIG4.png', dpi=300, bbox_inches='tight')
 plt.show()
 
 # %%
@@ -986,6 +987,7 @@ print(dimensions_count.head(5))
 
 # Tight layout and show
 plt.tight_layout()
+plt.savefig(r'./figures/FIG5.png', dpi=300, bbox_inches='tight')
 plt.show()
 
 #%%
@@ -1589,7 +1591,7 @@ plt.yticks(fontsize = 24)
 plt.xticks(ticks = range(0, counts.max(),5), fontsize = 22)
 
 sns.despine()
-
+plt.savefig(r'./figures/FIG6.png', dpi=300, bbox_inches='tight')
 plt.show()
 
 #%%
@@ -1744,6 +1746,7 @@ sns.despine(ax=ax3)
 
 # Tight layout and show
 plt.tight_layout()
+plt.savefig(r'./figures/FIG7.png', dpi=300, bbox_inches='tight')
 plt.show()
 
 #%%
@@ -2121,6 +2124,7 @@ ax2.text(0.0, 1.1, 'B', transform=ax2.transAxes, fontsize=36, fontweight='bold')
 sns.despine(ax=ax2)
 
 plt.tight_layout()
+plt.savefig(r'./figures/FIG8.png', dpi=300, bbox_inches='tight')
 plt.show()
 
 # Calcular y mostrar el total de artículos en cada plot
@@ -2232,7 +2236,6 @@ paper_id_to_citation = {
     113: "Selvi & Vijayakumaran, 2023",
     116: "Jung & Sejnowski, 2019",
     117: "Saffaryazdi et al., 2024",
-    129: "Ganapathy et al., 2021",
     131: "Pidgeon et al., 2022",
     133: "Dessai & Virani, 2023",
     135: "Gahlan & Sethia, 2024",
@@ -2345,7 +2348,7 @@ plt.setp(legend3.get_title(), weight='bold')
 
 # Remove spines
 sns.despine()
-
+plt.savefig(r'./figures/FIG10.png', dpi=300, bbox_inches='tight')    
 # Show the plot
 plt.show()
 #%%
