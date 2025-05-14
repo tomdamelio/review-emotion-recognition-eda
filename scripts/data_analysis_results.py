@@ -1,7 +1,7 @@
-# Data Analysis Script for Neurocomputing Journal Paper (2nd Revision)
+# Data Analysis Script for Neurocomputing
 # This script performs comprehensive analysis on research data, 
 # including statistical tests, data visualization, and network analysis
-# for the second revision of our submission to Neurocomputing journal.
+# for the submission to Neurocomputing journal.
 
 #%% 
 # Imports principales
@@ -95,6 +95,10 @@ for country, count in country_counts.items():
 print("\nConteo de papers por continente:")
 for continent, count in sorted(continent_counts.items(), key=lambda x: x[1], reverse=True):
     print(f"{continent}: {count}")
+
+# Calcular la suma total de papers por continente
+total_papers_by_continent = sum(continent_counts.values())
+print(f"\nSuma total de papers por continente: {total_papers_by_continent}")
 
 # Mostrar países sin categorizar
 print("\nPaíses sin categorizar:")
@@ -194,6 +198,7 @@ cbar.set_label('Number of Articles by Country', fontsize=16, fontweight='bold')
 cbar.ax.tick_params(labelsize=14)
 cbar.ax.set_position([0.1, 0.1, 0.4, 0.02])
 
+plt.savefig(r'./figures/FIG2.png', dpi=300, bbox_inches='tight')
 plt.show()
 
 #%% 
@@ -444,6 +449,19 @@ df_access_crosstab = df_access_crosstab[panel_a_order]
 # Custom colors for panel A
 panel_a_colors = ['#1f77b4', '#ff7f0e', '#2ca02c']  # blue, orange, green
 
+# Análisis de bases de datos abiertas
+open_dbs_papers = df_databases[df_databases['db_access'] == 'open']['paper_id'].unique()
+total_open_dbs = len(open_dbs_papers)
+
+# Contar uso de bases de datos específicas entre las bases abiertas
+top_open_dbs = ['deap', 'amigos', 'mahnob', 'case']
+for db in top_open_dbs:
+    papers_using_db = df_databases[(df_databases[db] == 'x') & 
+                                  (df_databases['db_access'] == 'open')]['paper_id'].unique()
+    count = len(papers_using_db)
+    percentage = (count / total_open_dbs * 100) if total_open_dbs > 0 else 0
+    print(f"Papers con acceso abierto que utilizan {db.upper()}: {count} ({percentage:.2f}%)")
+
 # Prepare data for panel B (database usage frequency)
 db_columns = ['deap', 'amigos', 'mahnob', 'case', 'ascertain', 'cog_load',
               'multimodal_dyadic_behavior', 'recola', 'decaf', 'driving_workload',
@@ -526,18 +544,7 @@ plt.savefig(r'./figures/FIG4.png', dpi=300, bbox_inches='tight')
 plt.show()
 
 # %%
-
 # Participants
-# Ahora tu tarea es analizar la composicion de la muestra en estos estudios
-# Debes buscar el promedio de sample size, y el rango (minimo y maximo sample size en la muestra)
-# Debes decirme cuantos papers no reportan la edad.
-# Tambien debes decirme cuantos papers no reportan el genero. Y, los que si lo hacen, cual es el porcentaje promedio de inclusion de mujeres en la muestra.
-# Debes decirme cuantos papers reportan de algun modo la edad de los participantes (edad promedio, rango, mediana, etc.)
-# De los papers que si reportan edad, debes decirme promedio across papers y el rango de edad across papers.
-# Por ultimo, tambien debes decirme cuantos papers reportan el pais de origen de la muestra. 
-# Y un count de los paises reportados
-
-#%%
 # Demographic analysis of participants
 print("\nParticipant Demographics Analysis:")
 
@@ -1533,7 +1540,7 @@ print(f"\nOn the other hand, {no_device_percentage:.1f}% of the studies did not 
 # Print total number of papers with EDA data for reference
 print(f"\nTotal number of papers with EDA data: {total_eda_papers}")
 
-
+#%%
 
 # Plot EDA devices
 from turtle import width
@@ -1631,27 +1638,34 @@ print(f"Percentage of left side placement when reported: {left_side_percentage}%
 
 # Analyze sensor locations
 print("\nSensor Location Analysis:")
-sensors = df_eda.groupby(['paper_id','is_hands','wrist', 'chest',
+sensors = df_eda.groupby(['paper_id','is_hands','wrist', 'chest', 'ankle', 'arm', 'back', 'abdomen', 'neck',
                     'finger_thumb', 'finger_index', 'finger_middle', 'finger_ring', 'finger_little',
                      'phalange_proximal', 'phalange_medial','phalange_distal',
                      ]).nth(0)
 sensors.reset_index(inplace=True)
 
-sensors_location = df_eda.groupby(['paper_id','is_hands','wrist', 'chest']).nth(0)
+sensors_location = df_eda.groupby(['paper_id','is_hands','wrist', 'chest', 'ankle', 'arm', 'back', 'abdomen', 'neck']).nth(0)
 sensors_location.reset_index(inplace=True)
 
 # Percentage of papers with no sensor location specified
 no_location_percentage = (len(sensors[(sensors['is_hands'] == '-') &
             (sensors['wrist'] == '-') &
-            (sensors['chest'] == '-')]) / len(sensors)) * 100
+            (sensors['chest'] == '-') &
+            (sensors['ankle'] == '-') &
+            (sensors['arm'] == '-') &
+            (sensors['back'] == '-') &
+            (sensors['abdomen'] == '-') &
+            (sensors['neck'] == '-')]) / len(sensors)) * 100
 print(f"\nPercentage of papers with no body part specified: {no_location_percentage:.1f}%")
 
 # Calculate percentage of papers reporting body part
 body_part_reported_percentage = 100 - no_location_percentage
 print(f"Percentage of studies reporting body part placement: {body_part_reported_percentage:.1f}%")
 
-# Frequency of sensor locations
-general_place = fn.multi_reversing(sensors, 'model_id',sensors[['is_hands','wrist', 'chest']])
+# Frequency of sensor locations'ankle', 'arm', 'back', 'abdomen', 'neck'
+
+
+general_place = fn.multi_reversing(sensors, 'model_id',sensors[['is_hands','wrist', 'chest', 'ankle', 'arm', 'back', 'abdomen', 'neck']])
 general_place_counts = general_place['variable'].value_counts()
 print("\nBody part placement counts:")
 print(general_place_counts)
@@ -1659,6 +1673,19 @@ print(general_place_counts)
 general_place_percentages = general_place['variable'].value_counts(normalize=True).mul(100).round(1)
 print("\nBody part placement percentages:")
 print(general_place_percentages.astype(str) + '%')
+
+# Create a grouped version with 'other' category
+general_place_grouped = general_place.copy()
+# Map chest, ankle, arm, back, abdomen, neck to 'other'
+general_place_grouped['variable'] = general_place_grouped['variable'].replace(
+    ['chest', 'ankle', 'arm', 'back', 'abdomen', 'neck'], 'other')
+general_place_grouped_counts = general_place_grouped['variable'].value_counts()
+print("\nGrouped body part placement counts:")
+print(general_place_grouped_counts)
+
+general_place_grouped_percentages = general_place_grouped['variable'].value_counts(normalize=True).mul(100).round(1)
+print("\nGrouped body part placement percentages:")
+print(general_place_grouped_percentages.astype(str) + '%')
 
 # Calculate percentage of hand placement
 hand_percentage = general_place_percentages.get('is_hands', 0)
@@ -1711,13 +1738,13 @@ gs = gridspec.GridSpec(1, 3)
 
 
 new_labels_ax1 = ['Left', 'Right', 'Not dominant', 'Dominant']
-new_labels_ax2 = ['Hand', 'Wrist', 'Chest']
+new_labels_ax2 = ['Hand', 'Wrist', 'Other']
 
 # SUBPLOT A
 ax1 = plt.subplot(gs[0, 0])
 plot_order = ['left', 'right', 'not dominant', 'dominant']
 sns.countplot(x='location_hemibody', data=hemibody, order=plot_order, ax=ax1, palette="tab10")
-ax1.set_title('Hemibody Location', fontweight='bold')
+ax1.set_title('Hemibody Location', fontweight='bold', y=1.02)
 ax1.set_ylabel("Frequency")
 ax1.set_xticklabels(new_labels_ax1, rotation=45)
 ax1.text(-0.1, 1.1, 'A', transform=ax1.transAxes, fontsize=36, fontweight='bold')
@@ -1726,8 +1753,8 @@ sns.despine(ax=ax1)
 
 # SUBPLOT B
 ax2 = plt.subplot(gs[0, 1])
-sns.countplot(x='variable', data=general_place, ax=ax2, palette="tab10")
-ax2.set_title('Location of Electrodes in the Body', fontweight='bold')
+sns.countplot(x='variable', data=general_place_grouped, ax=ax2, palette="tab10")
+ax2.set_title('Location of Electrodes in the Body', fontweight='bold', y=1.02)
 ax2.set_ylabel("Frequency")
 ax2.set_xticklabels(new_labels_ax2, rotation=45)
 ax2.text(-0.1, 1.1, 'B', transform=ax2.transAxes, fontsize=36, fontweight='bold')
@@ -1737,7 +1764,7 @@ sns.despine(ax=ax2)
 # SUBPLOT C
 ax3 = plt.subplot(gs[0, 2])
 sns.countplot(x='variable', data=finger_sensor, ax=ax3, palette="tab10")
-ax3.set_title('Location of Electrodes in the Hand', fontweight='bold')
+ax3.set_title('Location of Electrodes in the Hand', fontweight='bold', y=1.02)
 ax3.set_ylabel("Frequency")
 ax3.set_xticklabels(ax3.get_xticklabels(), rotation=45)
 ax3.text(-0.1, 1.1, 'C', transform=ax3.transAxes, fontsize=36, fontweight='bold')
@@ -1876,18 +1903,18 @@ class_mapping = {
     'recurrent_neuronal_network': 'Recurrent Neural Network',
     'gated_recurrent_units': 'Recurrent Neural Network',
 
-    'probabilistic_neural_network': 'Other / Unclear',
-    'radial_basis_function': 'Other / Unclear',
-    'Transformer': 'Other / Unclear',
-    'PhGP': 'Other / Unclear',
-    'spiking_deep_belief_network': 'Other / Unclear',
-    'SEL (Stacking Ensemble Learning)': 'Other / Unclear',
-    'LSLC': 'Other / Unclear',
-    'cellular_neural_networks': 'Other / Unclear',
-    'quantum_neural_network': 'Other / Unclear',
-    'hmm': 'Other / Unclear',
-    '1r_rule': 'Other / Unclear',
-    'y el paper no lo aclara)': 'Other / Unclear'
+    'probabilistic_neural_network': 'Other',
+    'radial_basis_function': 'Other',
+    'Transformer': 'Other',
+    'PhGP': 'Other',
+    'spiking_deep_belief_network': 'Other',
+    'SEL (Stacking Ensemble Learning)': 'Other',
+    'LSLC': 'Other',
+    'cellular_neural_networks': 'Other',
+    'quantum_neural_network': 'Other',
+    'hmm': 'Other',
+    '1r_rule': 'Other',
+    'y el paper no lo aclara)': 'Other'
 }
 
 # NEW: Plotting the frequency of specific regre algorithms used in the studies
@@ -1933,11 +1960,11 @@ sns.set_context("talk")
 class_counts = df_algoritmos_class['model_grouped'].value_counts()
 regre_counts = df_algoritmos_regre['model_grouped'].value_counts()
 
-class_order = class_counts[class_counts.index != 'Other / Unclear'].sort_values(ascending=False).index.tolist()
-class_order.append('Other / Unclear')
+class_order = class_counts[class_counts.index != 'Other'].sort_values(ascending=False).index.tolist()
+class_order.append('Other')
 
-regre_order = regre_counts[regre_counts.index != 'Other / Unclear'].sort_values(ascending=False).index.tolist()
-regre_order.append('Other / Unclear')
+regre_order = regre_counts[regre_counts.index != 'Other'].sort_values(ascending=False).index.tolist()
+#regre_order.append('Other')
 
 # Crear figura con subplots independientes (sin compartir eje Y)
 fig, axes = plt.subplots(1, 2, figsize=(16, 8), dpi=300)
@@ -1958,470 +1985,241 @@ axes[1].set_ylabel("")
 plt.tight_layout()
 sns.despine()
 plt.show()
+#%%
+## Crea un nuevo df que sea df_156_models que lea ./data/processed/final2_melted_df_excel_paired_ALL.xlsx')
+#df_156_models = pd.read_excel('./data/processed/final2_melted_df_excel_paired_ALL.xlsx')
+#
+#
+#class_mapping = {
+#    # --- Boosting‑based Models
+#    'AdaBoost': 'Boosting-based Models',
+#    'adaboost_dt': 'Boosting-based Models',
+#    'gradient_boostingclass': 'Boosting-based Models',
+#    'class_Gradient boostingclass': 'Boosting-based Models',
+#
+#    # --- Convolutional Neural Network
+#    'CNN 30': 'Convolutional Neural Network',
+#    'CNN 60': 'Convolutional Neural Network',
+#    'MSCNN 1 30': 'Convolutional Neural Network',
+#    'MSCNN 1 60': 'Convolutional Neural Network',
+#    'MSCNN 2 30': 'Convolutional Neural Network',
+#    'MSCNN 2 60': 'Convolutional Neural Network',
+#    'MSCNN 3 30': 'Convolutional Neural Network',
+#    'MSCNN 3 60': 'Convolutional Neural Network',
+#    'convolutional_neuronal_network': 'Convolutional Neural Network',
+#    'class_Convolutional NN': 'Convolutional Neural Network',
+#    'class_Convolutional NN Time Distributed 1D': 'Convolutional Neural Network',
+#    'class_Convolutional NN Time Dist. 1DCNN + Residual LSTM': 'Convolutional Neural Network',
+#    'class_Convolutional NN Time Dist. 1DCNN + Residual GRU': 'Convolutional Neural Network',
+#
+#    # --- Fully‑connected Neural Network
+#    'ann': 'Fully-connected Neural Network',
+#    'Double_Deep_Q_learning': 'Fully-connected Neural Network',
+#    'regre_fully_connected_neuronal_network_or_multi_layer_perceptron': 'Fully-connected Neural Network',
+#    'class_Fully connected NN (or Multi layer perceptron)': 'Fully-connected Neural Network',
+#    'class_MLP T.D Using PCA': 'Fully-connected Neural Network',
+#    'class_MLP F.D Using PCA': 'Fully-connected Neural Network',
+#    'class_MLP W.H.F Using PCA': 'Fully-connected Neural Network',
+#    'class_MLP W.L.F Using PCA': 'Fully-connected Neural Network',
+#    'class_MLP Joint-F.D Using PCA': 'Fully-connected Neural Network',
+#    'class_MLP Joint Using PCA': 'Fully-connected Neural Network',
+#    'class_MLP T.D Using Stepwise-Regression': 'Fully-connected Neural Network',
+#    'class_MLP F.D Using Stepwise-Regression': 'Fully-connected Neural Network',
+#    'class_MLP W.H.F Using Stepwise-Regression': 'Fully-connected Neural Network',
+#    'class_MLP W.L.F Using Stepwise-Regression': 'Fully-connected Neural Network',
+#    'class_MLP Joint-F.D Using Stepwise-Regression': 'Fully-connected Neural Network',
+#    'class_MLP Joint Using Stepwise-Regression': 'Fully-connected Neural Network',
+#
+#    # --- K‑Nearest Neighbors
+#    'k_nearest_neighbor': 'K-Nearest Neighbors',
+#    'class_k-Nearest Neighbor (k-NN)': 'K-Nearest Neighbors',
+#
+#    # --- Linear Models
+#    'logistic_regression': 'Linear Models',
+#    'quadratic_discrimant_classifier': 'Linear Models',
+#    'class_Linear Discriminant Analysis (LDA)': 'Linear Models',
+#
+#    # --- Naive Bayes
+#    'naive_bayes': 'Naive Bayes',
+#    'class_Naive Bayes': 'Naive Bayes',
+#    'GNB': 'Naive Bayes',
+#
+#    # --- Recurrent Neural Network
+#    'lstm': 'Recurrent Neural Network',
+#    'class_LSTM': 'Recurrent Neural Network',
+#
+#    # --- Support Vector Machine
+#    'support_vector_machine': 'Support Vector Machine',
+#    'class_Support Vector Machine (SVM)': 'Support Vector Machine',
+#    'class_Support Vector Machine (SVM) Lineal': 'Support Vector Machine',
+#    'class_Support Vector Machine (SVM) Polynomial': 'Support Vector Machine',
+#    'class_Support Vector Machine (SVM) Gaussian': 'Support Vector Machine',
+#
+#    # --- Tree‑based Models
+#    'tree_based_models': 'Tree-based Models',
+#    'class_Tree based models': 'Tree-based Models',
+#    'class_Tree based models 10x63 No -Conv': 'Tree-based Models',
+#    'class_Tree based models 10x21 No -Conv': 'Tree-based Models',
+#    'class_Tree based models 10x12 No -Conv': 'Tree-based Models',
+#    'class_Tree based models 10x8 No -Conv': 'Tree-based Models',
+#    'class_Tree based models 10x6 No -Conv': 'Tree-based Models',
+#    'class_Tree based models 10x5 No -Conv': 'Tree-based Models',
+#    'class_Tree based models 10x4 No -Conv': 'Tree-based Models',
+#    'class_Tree based models 10x2 No -Conv': 'Tree-based Models',
+#    'class_Tree based models 10x1 No -Conv': 'Tree-based Models',
+#    'class_Tree based models 10x63 Convolution': 'Tree-based Models',
+#    'class_Tree based models 10x21 Convolution': 'Tree-based Models',
+#    'class_Tree based models 10x12 Convolution': 'Tree-based Models',
+#    'class_Tree based models 10x8 Convolution': 'Tree-based Models',
+#    'class_Tree based models 10x6 Convolution': 'Tree-based Models',
+#    'class_Tree based models 10x5 Convolution': 'Tree-based Models',
+#    'class_Tree based models 10x4 Convolution': 'Tree-based Models',
+#    'class_Tree based models 10x2 Convolution': 'Tree-based Models',
+#    'class_Tree based models 10x1 Convolution': 'Tree-based Models',
+#
+#    # --- Other / Unclear
+#    'class_Extreme Learning Machine (ELM) Without Baseline Compensation Baseline Compensated': 'Other / Unclear',
+#    'class_Extreme Learning Machine (ELM) Baseline Compensated': 'Other / Unclear',
+#    'extreme_learning_machine': 'Other / Unclear',
+#    'EMB Based': 'Other / Unclear',
+#    'Non – EMD': 'Other / Unclear',
+#    'class_HDC-MER': 'Other / Unclear',
+#    'class_Deep Hybrid Neural Networks': 'Other / Unclear',
+#    'class_Spiking Deep Belief Network (SDBN)': 'Other / Unclear',
+#    'Transformer': 'Other / Unclear',
+#}
+
+
+## Ahora agrega una columna 'model_family' segun el siguiente mapeo class_mapping
+##df_156_models['model_family'] = df_156_models['ML_model'].map(class_mapping)
+
+
+## Guarda el df_156_models en ./data/processed/final2_melted_df_excel_paired_ALL_model_family.xlsx
+##df_156_models.to_excel('./data/processed/final2_melted_df_excel_paired_ALL_model_family.xlsx', index=False)
 
 #%%
-# Plotting frequency of all models
-df_all_models = df_statistical_learning_models.iloc[:,1:57]
-df_all_models.drop(df_all_models.columns[[1,2,3,4,5,6,39,40,41]], axis=1, inplace=True)
+# Read ./data/processed/final2_melted_df_excel_paired_ALL_model_family.xlsx
+df_156_models = pd.read_excel('./data/processed/df_metanalysis.xlsx')
 
-df_all_models = fn.multi_reversing(df_all_models, 'model_id', df_all_models.iloc[:,1:])
-df_all_models['variable'] = df_all_models['variable'].str.replace('class_','')
-df_all_models['variable'] = df_all_models['variable'].str.replace('regre_','')
+# Verificar las columnas disponibles
+print("Columnas disponibles:", df_156_models.columns.tolist())
 
-sns.countplot(x='variable', data=df_all_models, order = getattr(df_all_models, 'variable').value_counts().index, palette="Paired")
-plt.xticks(rotation=90)
-plt.show()
+# Verificar si hay datos en las columnas de interés
+print(f"Registros totales: {len(df_156_models)}")
+print(f"Valores únicos en model_family: {df_156_models['model_family'].nunique()}")
+print(f"Valores nulos en accuracy_arousal: {df_156_models['accuracy_arousal'].isna().sum()}")
+print(f"Valores nulos en accuracy_valence: {df_156_models['accuracy_valence'].isna().sum()}")
 
-#%%
-# Porcentaje de modelos de regresión
-df_algoritmos_regre['model'].value_counts(normalize=True).mul(100).round(2)
+# Convertir columnas a numéricas antes de agrupar
+df_156_models['accuracy_arousal'] = pd.to_numeric(df_156_models['accuracy_arousal'], errors='coerce')
+df_156_models['accuracy_valence'] = pd.to_numeric(df_156_models['accuracy_valence'], errors='coerce')
 
-# Porcentaje de modelos de clasificación
-df_algoritmos_class['model'].value_counts(normalize=True).mul(100).round(2)
+# Eliminar filas con valores nulos en las columnas de interés
+df_156_models_alt = df_156_models.dropna(subset=['model_family', 'accuracy_arousal', 'accuracy_valence'])
+print(f"Registros después de eliminar nulos: {len(df_156_models_alt)}")
 
-df_models = df_statistical_learning_models[["paper_id","apa_citation",'model', "year", "model_id"]]
+# Preparar datos para el boxplot con accuracy
+arousal_acc_data = df_156_models_alt[['model_family', 'accuracy_arousal']].copy()
+arousal_acc_data['dimension'] = 'Arousal'
+arousal_acc_data.rename(columns={'accuracy_arousal': 'performance'}, inplace=True)
 
-df_models = df_models.groupby(
-        ["paper_id",'model']
-        ).nth(0)
-df_models.reset_index(inplace=True)
+valence_acc_data = df_156_models_alt[['model_family', 'accuracy_valence']].copy()
+valence_acc_data['dimension'] = 'Valence'
+valence_acc_data.rename(columns={'accuracy_valence': 'performance'}, inplace=True)
 
+# Combinar los datos
+plot_acc_data = pd.concat([arousal_acc_data, valence_acc_data])
 
-models = df_statistical_learning_models[["paper_id", "year", "affective_model", "model_id"]]
-
-models = models.groupby(
-        ["paper_id",'affective_model']
-        ).nth(0)
-models.reset_index(inplace=True)
-
-models["year"] = models["year"].astype(int)
-
-models_crosstab = pd.crosstab(index=models['year'], columns=models['affective_model'],normalize='index')
-
-# Analyze the chronological evolution of affective models
-early_years = models[models['year'] <= 2015]
-early_years_counts = early_years['affective_model'].value_counts(normalize=True).mul(100).round(1)
-print("\nAffective model distribution in early years (up to 2015):")
-print(early_years_counts)
-
-later_years = models[models['year'] > 2015]
-later_years_counts = later_years['affective_model'].value_counts(normalize=True).mul(100).round(1)
-print("\nAffective model distribution in later years (after 2015):")
-print(later_years_counts)
-
-n_models = df_models.groupby(
-        ["paper_id",'model']
-        ).nth(0)
-n_models.reset_index(inplace=True)
-
-n_models["year"] = n_models["year"].astype(int)
-
-n_models_crosstab = pd.crosstab(index=n_models['year'], columns=n_models['model'],normalize='index')
-
-
-#%%
-# Plotting Figure 8: Chronological evolution of emotion model types and algorithm usage in emotion recognition research with EDA over a decade
-import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
-import seaborn as sns
-import numpy as np
-
-# Set the context for even bigger fonts
+# Configurar el estilo de seaborn
 sns.set_context("talk")
 
-# Create figure with custom GridSpec
-fig = plt.figure(figsize=(10, 10), dpi=300)
-gs = gridspec.GridSpec(2, 1)
-
-# SUBPLOT A
-ax1 = plt.subplot(gs[0, 0])
-(models_crosstab * 100).plot(kind='bar',  
-                            stacked=True,
-                            rot=0,
-                            ax=ax1,
-                            color=['#1f77b4', '#ff7f0e'])
-ax1.set_ylim([0, 100])  # Hasta 100%
-ax1.set_xticklabels(ax1.get_xticklabels())
-plt.xticks(rotation=45)
-ax1.set_yticklabels(ax1.get_yticklabels())
-ax1.set_xlabel("Year")
-ax1.set_ylabel("Percentage of articles (%)")
-ax1.legend(title='Affective model', loc='upper right', bbox_to_anchor=(1, 1.4),
-          frameon=False, fancybox=True, ncol=2, fontsize=18)
-ax1.text(0.0, 1.1, 'A', transform=ax1.transAxes, fontsize=36, fontweight='bold')
-# Ensure y-axis goes from 0 to 100
-ax1.set_yticks(np.arange(0, 101, 20))
-sns.despine(ax=ax1)
-
-# SUBPLOT B
-ax2 = plt.subplot(gs[1, 0])
-(n_models_crosstab * 100).plot(kind='bar',  
-                              stacked=True,
-                              rot=0,
-                              ax=ax2,
-                              color=['#1f77b4', '#ff7f0e'])
-ax2.set_ylim([0, 100])  # Hasta 100%
-ax2.set_xticklabels(ax2.get_xticklabels())
-plt.xticks(rotation=45)
-ax2.set_yticklabels(ax2.get_yticklabels())
-ax2.set_xlabel("Year")
-ax2.set_ylabel("Percentage of articles (%)")
-ax2.legend(title='Type of algorithm', loc='upper right', bbox_to_anchor=(1, 1.4),
-          frameon=False, fancybox=True, ncol=2, fontsize=18)
-ax2.text(0.0, 1.1, 'B', transform=ax2.transAxes, fontsize=36, fontweight='bold')
-# Ensure y-axis goes from 0 to 100
-ax2.set_yticks(np.arange(0, 101, 20))
-sns.despine(ax=ax2)
-
-plt.tight_layout()
-plt.show()
-
-#%%
-# Plotting Figure 9: Absolute counts of emotion model types and algorithm usage by year
-# Create raw counts crosstabs (without normalization)
-models_crosstab_counts = pd.crosstab(index=models['year'], columns=models['affective_model'])
-n_models_crosstab_counts = pd.crosstab(index=n_models['year'], columns=n_models['model'])
-
-# Set the context for even bigger fonts
-sns.set_context("talk")
-
-# Create figure with custom GridSpec
-fig = plt.figure(figsize=(10, 10), dpi=300)
-gs = gridspec.GridSpec(2, 1)
-
-# SUBPLOT A - Absolute counts of affective models
-ax1 = plt.subplot(gs[0, 0])
-models_crosstab_counts.plot(kind='bar',  
-                           stacked=True,
-                           rot=0,
-                           ax=ax1,
-                           color=['#1f77b4', '#ff7f0e'])
-ax1.set_xticklabels(ax1.get_xticklabels())
-plt.xticks(rotation=45)
-ax1.set_yticklabels(ax1.get_yticklabels())
-ax1.set_xlabel("Year")
-ax1.set_ylabel("Number of articles")
-ax1.legend(title='Affective model', loc='upper right', bbox_to_anchor=(1, 1.4),
-          frameon=False, fancybox=True, ncol=2, fontsize=18)
-ax1.text(0.0, 1.1, 'A', transform=ax1.transAxes, fontsize=36, fontweight='bold')
-sns.despine(ax=ax1)
-
-# SUBPLOT B - Absolute counts of algorithm types
-ax2 = plt.subplot(gs[1, 0])
-n_models_crosstab_counts.plot(kind='bar',  
-                             stacked=True,
-                             rot=0,
-                             ax=ax2,
-                             color=['#1f77b4', '#ff7f0e'])
-ax2.set_xticklabels(ax2.get_xticklabels())
-plt.xticks(rotation=45)
-ax2.set_yticklabels(ax2.get_yticklabels())
-ax2.set_xlabel("Year")
-ax2.set_ylabel("Number of articles")
-ax2.legend(title='Type of algorithm', loc='upper right', bbox_to_anchor=(1, 1.4),
-          frameon=False, fancybox=True, ncol=2, fontsize=18)
-ax2.text(0.0, 1.1, 'B', transform=ax2.transAxes, fontsize=36, fontweight='bold')
-sns.despine(ax=ax2)
-
-plt.tight_layout()
-plt.savefig(r'./figures/FIG8.png', dpi=300, bbox_inches='tight')
-plt.show()
-
-# Calcular y mostrar el total de artículos en cada plot
-total_articles_plot_A = models_crosstab_counts.sum().sum()
-print(f"\nTotal de artículos en el Plot A (Affective models): {total_articles_plot_A}")
-
-total_articles_plot_B = n_models_crosstab_counts.sum().sum()
-print(f"Total de artículos en el Plot B (Algorithm types): {total_articles_plot_B}")
-
-# Análisis de la diferencia entre los totales
-print("\n--- Análisis de la diferencia entre totales ---")
-
-# Verificar cuántos papers únicos hay en cada dataframe
-unique_papers_models = models['paper_id'].nunique()
-unique_papers_n_models = n_models['paper_id'].nunique()
-print(f"Papers únicos en 'models' (Affective models): {unique_papers_models}")
-print(f"Papers únicos en 'n_models' (Algorithm types): {unique_papers_n_models}")
-
-# Identificar qué papers están en uno pero no en el otro
-papers_in_models = set(models['paper_id'].unique())
-papers_in_n_models = set(n_models['paper_id'].unique())
-
-papers_only_in_models = papers_in_models - papers_in_n_models
-papers_only_in_n_models = papers_in_n_models - papers_in_models
-
-print(f"\nPapers que solo aparecen en 'models' (no en 'n_models'): {len(papers_only_in_models)}")
-if len(papers_only_in_models) > 0:
-    print("Ejemplos de paper_id:", list(papers_only_in_models)[:5])
-
-print(f"\nPapers que solo aparecen en 'n_models' (no en 'models'): {len(papers_only_in_n_models)}")
-if len(papers_only_in_n_models) > 0:
-    print("Ejemplos de paper_id:", list(papers_only_in_n_models)[:5])
-
-# Verificar si hay duplicados en los conteos
-print("\nVerificando duplicados en los conteos:")
-duplicates_in_models = models[models.duplicated(subset=['paper_id'], keep=False)]
-print(f"Duplicados en 'models' por paper_id: {len(duplicates_in_models)}")
-
-duplicates_in_n_models = n_models[n_models.duplicated(subset=['paper_id'], keep=False)]
-print(f"Duplicados en 'n_models' por paper_id: {len(duplicates_in_n_models)}")
-
-# Verificar valores nulos o faltantes
-print("\nVerificando valores nulos o faltantes:")
-print(f"Valores nulos en 'models' para affective_model: {models['affective_model'].isna().sum()}")
-print(f"Valores nulos en 'n_models' para model: {n_models['model'].isna().sum()}")
-
-#%%
-# Percentage of model tpyes used in the studies
-n_models["model"].value_counts(normalize=True).mul(100).round(1).astype(str) + '%'
-
-# Percentage of affective models used in the studies
-models["affective_model"].value_counts(normalize=True).mul(100).round(1).astype(str) + '%'
-
-# 3. Interpretation analysis
-
-model_interpretion = df_statistical_learning_models[df_statistical_learning_models['model_interpretation'] !='-']
-model_interpretation = model_interpretion.groupby(['paper_id', 'model_interpretation']).nth(0)
-
-model_interpretation.reset_index(inplace= True)
-model_interpretation.drop_duplicates(subset = ['paper_id'],inplace=True)
-print(f' En {len(model_interpretation)} papers se realizan interpretaciones emocionales de los modelos')
-
-model_interpretation_list = model_interpretation["paper_id"].to_list()
-model_interpretation_list = [int(a) for a in model_interpretation_list]
-
-df_metadata_filtered = df_metadata[df_metadata['paper_id'].isin(model_interpretation_list)]
-df_metadata_filtered.drop_duplicates("paper_id", inplace= True)
-df_metadata_filtered[["paper_id", "apa_citation", "year", "source_title"]]
-
-
-# Contar cuántas veces aparece cada journal
-journal_counts = df_metadata_filtered['source_title'].value_counts()
-
-# Filtrar para quedarnos solo con los journals con más de una interpretación
-journals_with_multiple = journal_counts[journal_counts > 1].index
-df_metadata_filtered = df_metadata_filtered[df_metadata_filtered['source_title'].isin(journals_with_multiple)]
-
-# Plot
-titulos = [' ', 'Journal', 'Cantidad']
-var_x = "source_title"
-df = df_metadata_filtered
-
-g = sns.countplot(y=var_x, data=df, order=getattr(df, var_x).value_counts().index)
-g.set(title=titulos[0], xlabel=titulos[1], ylabel=titulos[2])
-plt.xticks(rotation=90)
-plt.tight_layout()
-plt.show()
-
-# %%
-import statsmodels.api as sm
-from scipy.stats import permutation_test, ttest_1samp, bootstrap
-from statsmodels.regression.linear_model import OLS
-df = pd.read_excel('./data/processed/final_melted_df_excel_paired_ALL.xlsx')
-
-paper_id_to_citation = {
-    20: "Wiem & Lachiri, 2017",
-    23: "Ayata et al., 2017",
-    32: "Siddharth et al., 2018",
-    38: "Ayata et al., 2017",
-    63: "Sharma et al., 2019",
-    66: "Ganapathy et al., 2020",
-    74: "Chang et al., 2019",
-    82: "Santamaria-Granados et al., 2018",
-    86: "Ganapathy & Swaminathan, 2020",
-    91: "Susanto et al., 2020",
-    94: "Yin et al., 2019",
-    97: "Ganapathy & Swaminathan, 2019",
-    109: "Bota et al., 2023",
-    113: "Selvi & Vijayakumaran, 2023",
-    116: "Jung & Sejnowski, 2019",
-    117: "Saffaryazdi et al., 2024",
-    131: "Pidgeon et al., 2022",
-    133: "Dessai & Virani, 2023",
-    135: "Gahlan & Sethia, 2024",
-    138: "Chen et al., 2022",
-    139: "Mu et al., 2024",
-    142: "Perry Fordson et al., 2022",
-    145: "Zhu et al., 2023",
-    150: "Yin et al., 2022",
-    154: "Joo et al., 2024",
-    156: "Raheel et al., 2021",
-    157: "Veeranki et al., 2024",
-    161: "Shukla et al., 2019",
-    162: "Chatterjee et al., 2022",
-    163: "Tabbaa et al., 2021",
-    166: "Gohumpu et al., 2023",
-    171: "Singh et al., 2023",
-    173: "Kumar & Fredo, 2025",
-    174: "Liu et al., 2023",
-    182: "Elalamy et al., 2021"
+# Definir colores para mantener consistencia entre paneles
+color_palette = sns.color_palette("tab10")
+arousal_color = color_palette[0]  # Azul
+valence_color = color_palette[1]  # Naranja
+dimension_palette = {
+    'Arousal': arousal_color,
+    'Valence': valence_color
 }
 
-df['diff_acc'] = df['accuracy_arousal'] - df['accuracy_valence']
+# Crear una figura grande para contener todos los subplots
+fig_alt = plt.figure(figsize=(16, 16), dpi=300)
+gs_alt = fig_alt.add_gridspec(2, 2, height_ratios=[1, 1.5])
 
-df['mean_acc'] = np.mean([df['accuracy_arousal'], df['accuracy_valence']], axis=0)
+# Subplot A - Clasificadores (parte superior izquierda)
+ax1_alt = fig_alt.add_subplot(gs_alt[0, 0])
+sns.countplot(y='model_grouped', data=df_algoritmos_class, order=class_order, ax=ax1_alt, palette="tab10")
+ax1_alt.set_title('Classification Models', fontweight='bold')
+ax1_alt.set_xlabel("Frequency")
+ax1_alt.set_ylabel("")
+ax1_alt.text(-0.1, 1.1, 'A', transform=ax1_alt.transAxes, fontsize=36, fontweight='bold')
 
-from scipy.stats import linregress
-import matplotlib.pyplot as plt
-import numpy as np
+# Subplot B - Regresores (parte superior derecha)
+ax2_alt = fig_alt.add_subplot(gs_alt[0, 1])
+sns.countplot(y='model_grouped', data=df_algoritmos_regre, order=regre_order, ax=ax2_alt, palette="tab10")
+ax2_alt.set_title('Regression Models', fontweight='bold')
+ax2_alt.set_xlabel("Frequency")
+ax2_alt.set_ylabel("")
+ax2_alt.text(-0.1, 1.1, 'B', transform=ax2_alt.transAxes, fontsize=36, fontweight='bold')
 
-# Sample data for demonstration (replace with your actual DataFrame)
-# import pandas as pd
-# df = pd.DataFrame({
-#     'paper_id': [...],
-#     'N': [...],
-#     'accuracy_arousal': [...],
-#     'accuracy_valence': [...]
-# })
+# Ordenar los modelos por rendimiento medio pero asegurando que "Other / Unclear" esté al final
+# Calcular el rendimiento medio por modelo
+model_performance = plot_acc_data.groupby('model_family')['performance'].mean().reset_index()
+# Separar "Other / Unclear" y el resto de modelos
+other_model = model_performance[model_performance['model_family'] == 'Other']
+rest_models = model_performance[model_performance['model_family'] != 'Other']
+# Ordenar el resto de modelos por rendimiento
+rest_models_sorted = rest_models.sort_values('performance', ascending=False)
+# Crear el orden final con "Other / Unclear" al final
+model_order = rest_models_sorted['model_family'].tolist()
+if not other_model.empty:
+    model_order.append('Other')
 
-# Calculate the difference in accuracy
-df['diff_acc'] = df['accuracy_arousal'] - df['accuracy_valence']
+# Subplot C - Boxplot de rendimiento con datos alternativos
+ax3_alt = fig_alt.add_subplot(gs_alt[1, :])
+boxplot_acc = sns.boxplot(
+    x='performance', 
+    y='model_family', 
+    hue='dimension',
+    data=plot_acc_data,
+    palette=dimension_palette,
+    width=0.6,
+    ax=ax3_alt,
+    order=model_order
+)
 
-# Unique paper IDs
-unique_paper_ids = df['paper_id'].unique()
+# Agregar los puntos individuales
+sns.stripplot(
+    x='performance', 
+    y='model_family', 
+    hue='dimension',
+    data=plot_acc_data,
+    palette=dimension_palette,
+    size=7,
+    alpha=0.7,
+    dodge=True,
+    jitter=True,
+    ax=ax3_alt
+)
 
-# Create a color map for paper IDs
-colors = plt.cm.tab10(np.linspace(0, 1, len(unique_paper_ids)))
+# Configurar etiquetas y título
+ax3_alt.set_xlabel('Performance (Accuracy %)', fontsize=17)
+ax3_alt.set_ylabel(' ', fontsize=14)
+ax3_alt.set_title('Model Performance', fontweight='bold')
+ax3_alt.text(-0.05, 1.05, 'C', transform=ax3_alt.transAxes, fontsize=36, fontweight='bold')
 
-plt.figure(figsize=(22, 9))  # Significantly increased width to accommodate the legend
+# Ajustar la leyenda para evitar duplicados
+handles, labels = ax3_alt.get_legend_handles_labels()
+ax3_alt.legend(handles[:2], labels[:2], title='Dimension', loc='upper left')
 
-# Calculate the mean difference in accuracy
-mean_diff_acc = np.mean(df['diff_acc'])
+# Establecer límites del eje x
+ax3_alt.set_xlim(0, 100)
 
-# Add a horizontal line to represent the mean difference in accuracy
-plt.axhline(mean_diff_acc, color='black', linestyle='-', linewidth=2)
+# Agregar una línea de cuadrícula
+ax3_alt.grid(axis='x', linestyle='--', alpha=0.7)
 
-# Add text to indicate the mean value
-plt.text(max(df['accuracy_valence']) * 1, mean_diff_acc, f'Mean difference = {mean_diff_acc:.2f}', verticalalignment='bottom', horizontalalignment='right')
-
-# Calculate the correlation coefficient and p-value
-slope, intercept, r_value, p_value, std_err = linregress(df['accuracy_valence'], df['diff_acc'])
-
-for i, paper_id in enumerate(unique_paper_ids):
-    subset = df[df['paper_id'] == paper_id]
-    
-    # Check if N == 32 for the subset
-    is_N_32 = subset['N'] == 32
-    
-    # Get the citation for the paper ID
-    citation = paper_id_to_citation.get(paper_id, f"Paper ID {paper_id}")
-    
-    # Plot points with N == 32 using triangles
-    if any(is_N_32):
-        plt.scatter(subset['accuracy_valence'][is_N_32], subset['diff_acc'][is_N_32], 
-                    color=colors[i], marker='^', label=f"{citation}")
-    
-    # Plot other points using circles
-    if any(~is_N_32):
-        plt.scatter(subset['accuracy_valence'][~is_N_32], subset['diff_acc'][~is_N_32], 
-                    color=colors[i], label=citation)
-
-# Adding horizontal lines
-plt.axhline(np.mean(df['diff_acc']) + 1.96 * np.std(df['diff_acc']), linestyle='--')
-plt.axhline(np.mean(df['diff_acc']) - 1.96 * np.std(df['diff_acc']), linestyle='--')
-
-# Adding labels and title
-plt.xlabel('Accuracy of Valence Models')
-plt.ylabel('Difference in Accuracy (Arousal - Valence)')
-plt.title('Valence Accuracy vs Difference in Arousal and Valence Accuracy')
-
-# Adjust the layout to maintain the plot size
-plt.tight_layout(rect=[0, 0, 0.45, 1])  # Adjusted to leave about 1/3 of figure width for legends
-
-# Get handles and labels for the references
-handles, labels = plt.gca().get_legend_handles_labels()
-
-# Single legend for all references with increased font size for better readability
-legend1 = plt.legend(handles, labels, title='References', 
-                    bbox_to_anchor=(1.01, 1), loc='upper left', ncol=1, 
-                    fontsize=9, title_fontsize=10)
-plt.gca().add_artist(legend1)
-plt.setp(legend1.get_title(), weight='bold')
-
-# Legend for marker types
-legend3 = plt.legend([plt.Line2D([0], [0], marker='^', color='w', markerfacecolor='black', markersize=10),
-                      plt.Line2D([0], [0], marker='o', color='w', markerfacecolor='black', markersize=10)],
-                     ['DEAP Database                       ', 'Other Data'], 
-                     title='Database', 
-                     bbox_to_anchor=(1.01, 0.1), loc='upper left')
-plt.setp(legend3.get_title(), weight='bold')
-
-# Remove spines
+# Ajustar márgenes
+plt.tight_layout()
 sns.despine()
-plt.savefig(r'./figures/FIG10.png', dpi=300, bbox_inches='tight')    
-# Show the plot
+plt.savefig(r'./figures/FIG9.png', dpi=300, bbox_inches='tight')
 plt.show()
-#%%
-
-x = df['diff_acc']
-
-def my_stat(x):
-    return ttest_1samp(x, popmean=0).statistic
-
-#%%
-permutation_test((x.values,), my_stat, permutation_type='samples')
-
-#%%
-bootstrap((x.values,), my_stat)
-#%%
-X = df[['N', 'year', 'mean_acc']]
-X = sm.add_constant(X)
-
-y = df['diff_acc']
-
-model = OLS(y, X)
-res = model.fit()
-res.summary()
-
-#%%%
-rlm_mod = sm.RLM(y, X, M=sm.robust.norms.HuberT())
-rlm_res = rlm_mod.fit()
-rlm_res.summary()
-
-# %%
-# SEGUIR DESDE ACA ->
-# Con los datos del meta analisis hacer un boxplot de la diferencia de accuracy entre arousal y valence agrupado por modelo.
-# Para eso, voy a tener que hacer un join para entender que modelo es el que se esta usando en cada estudio
-# Eso me daria e panel C del plot que inicio Jero
-# Luego de eso, tendria que integrar el plot pasado (panel A y B, que hizo Jero) con este panel C.
-
-#%% Tabla 2
-
-modelos_metaanalisis = pd.read_excel(r'.\data\processed\final_melted_df_excel_paired_ALL.xlsx')
-tabla_metaanalisis = pd.DataFrame()
-
-list_databases = ['MAHNOB', 'MAHNOB', 'MAHNOB', 'DEAP', 'DEAP', 'DEAP', 'DEAP', 'DEAP', 'DEAP',
- 'DEAP', 'DEAP', 'DEAP', 'DEAP', 'DEAP', 'DEAP', 'DEAP', 'DEAP', 'DEAP', 'DEAP',
- 'DEAP', 'DEAP', 'AMIGOS', 'AMIGOS', 'DEAP', 'DEAP', 'DEAP', 'DEAP', 'DEAP',
- 'DEAP', 'DEAP', 'DEAP', 'DEAP', 'DEAP', 'DEAP', 'DEAP', 'DEAP', 'DEAP', 'DEAP',
- 'DEAP', 'DEAP', 'DEAP', 'DEAP', 'DEAP', 'DEAP', 'DEAP', 'DEAP', 'DEAP', 'DEAP',
- 'DEAP', 'AMIGOS', 'AMIGOS', 'AMIGOS', 'AMIGOS', 'AMIGOS', 'AMIGOS', 'AMIGOS',
- 'AMIGOS', 'AMIGOS', 'AMIGOS', 'AMIGOS', 'DEAP', 'PMEmo', 'PMEmo', 'PMEmo',
- 'PMEmo', 'PMEmo', 'PMEmo', 'DEAP', 'DEAP', 'DEAP', 'DEAP', 'DEAP', 'DEAP',
- 'DEAP', 'DEAP', 'AMIGOS', 'AMIGOS', 'AMIGOS', 'AMIGOS', 'K-EmoCon', 'K-EmoCon',
- 'K-EmoCon', 'K-EmoCon', 'ASCERTAIN', 'ASCERTAIN', 'ASCERTAIN', 'DEAP',
- 'AMIGOS', 'MAHNOB', 'DEAP and AMIGOS', 'DEAP, AMIGOS AND MAHNOB',
- 'DEAP, AMIGOS (training) and MAHNOB (test)', 'DEAP (training) and MANHOB (test)',
- 'Private', 'DEAP', 'DEAP', 'DEAP', 'AMIGOS', 'AMIGOS', 'Private', 'Private',
- 'Private', 'Private', 'BM-SWU', 'BM-SWU', 'BM-SWU', 'BM-SWU', 'BM-SWU',
- 'PAFEW', 'PAFEW', 'PAFEW', 'PAFEW', 'PAFEW', 'DEAP', 'DEAP', 'DEAP', 'DEAP',
- 'DEAP', 'AMIGOS', 'AMIGOS', 'AMIGOS', 'AMIGOS', 'AMIGOS', 'VREED', 'VREED',
- 'VREED', 'VREED', 'VREED', 'VREED', 'Private', 'DEAP', 'DEAP', 'DEAP', 'DEAP',
- 'AMIGOS', 'ASCERTAIN', 'ASCERTAIN', 'ASCERTAIN', 'ASCERTAIN', 'ASCERTAIN',
- 'VREED', 'DEAP', 'DEAP', 'DEAP', 'MAHNOB', 'CASE', 'CASE', 'CASE', 'CASE',
- 'DEAP', 'MAHNOB', 'AMIGOS', 'AMIGOS', 'DEAP', 'DEAP']
-
-tabla_metaanalisis["Citation"] = modelos_metaanalisis["apa_citation"]
-tabla_metaanalisis["Year"] = modelos_metaanalisis["year"]
-tabla_metaanalisis["Modelos Machine Learning"] = modelos_metaanalisis["ML_model"]
-tabla_metaanalisis["Database"] = list_databases
-tabla_metaanalisis["Arousal Accuracy (%)"] = modelos_metaanalisis["accuracy_arousal"]
-tabla_metaanalisis["Valence Accuracy (%)"] = modelos_metaanalisis["accuracy_valence"]
-tabla_metaanalisis["Mean Accuracy (%)"] =((tabla_metaanalisis["Arousal Accuracy (%)"]+tabla_metaanalisis["Valence Accuracy (%)"])/2).round(2)
-
-tabla_metaanalisis.to_excel("data/processed/TABLE_2_incomplete.xlsx")
-
-tabla_2 = tabla_metaanalisis.loc[tabla_metaanalisis.groupby("Citation")["Mean Accuracy (%)"].idxmax()]
-
-tabla_2.to_excel("data/processed/TABLE_2_final.xlsx")
-# %%
